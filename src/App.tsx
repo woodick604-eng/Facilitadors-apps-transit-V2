@@ -1,274 +1,805 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ExternalLink, 
+import {
+  ExternalLink,
   Info,
   KeyRound,
   ChevronRight,
   AlertCircle,
   Clock,
   ShieldCheck,
-  LogOut
+  LogOut,
+  X,
+  Maximize2,
+  Users,
+  Settings,
+  Activity,
+  UserPlus,
+  RefreshCw,
+  Search,
+  Monitor,
+  LayoutGrid,
+  Home,
+  Mail,
+  Edit2,
+  Check
 } from 'lucide-react';
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useMemo } from 'react';
 import { APP_LINKS, AppLink } from './constants';
+import { db } from './firebase';
+import { doc, getDoc, updateDoc, setDoc, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [tipInput, setTipInput] = useState('');
   const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [currentUser, setCurrentUser] = useState<{ tip: string, name: string, isAdmin?: boolean } | null>(null);
   const [error, setError] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [activeApp, setActiveApp] = useState<AppLink | null>(null);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+
+  // Real-time validation states
+  const [isTipValidated, setIsTipValidated] = useState(false);
+  const [tempUserData, setTempUserData] = useState<any>(null);
+  const [iframeKey, setIframeKey] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  const handleLogin = (e: FormEvent) => {
-    e.preventDefault();
-    if (pin === '5085') {
-      setIsAuthenticated(true);
-      setError('');
-    } else {
-      setError('PIN incorrecte. Torneu-ho a provar.');
-      setPin('');
+  // Real-time TIP validation logic
+  useEffect(() => {
+    const validateTip = async () => {
+      let input = tipInput.toUpperCase().trim();
+      if (!input) {
+        setIsTipValidated(false);
+        setTempUserData(null);
+        setError('');
+        return;
+      }
+
+      // Extract only digits from input
+      const digits = input.replace(/\D/g, '');
+
+      let searchTip = '';
+      if (digits.length > 0 && digits.length <= 6) {
+        // Handle numeric-only or PG+number by padding the numbers
+        searchTip = 'PG' + digits.padStart(6, '0');
+      } else if (input.startsWith('PG') && input.length === 8) {
+        // Already formatted
+        searchTip = input;
+      }
+
+      if (searchTip && searchTip.length === 8) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', searchTip));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            if (userData.status === 'off') {
+              setIsTipValidated(false);
+              setTempUserData(null);
+              setError('AGENT DONAT DE BAIXA DEL SISTEMA.');
+              return;
+            }
+            setIsTipValidated(true);
+            setTempUserData(userData);
+            setError('');
+          } else {
+            setIsTipValidated(false);
+            setTempUserData(null);
+            // Show error if they entered something that looks like it's done
+            if (input.length >= 4) {
+              setError('Agent no registrat.');
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      } else {
+        setIsTipValidated(false);
+        setTempUserData(null);
+        setError('');
+      }
+    };
+    validateTip();
+  }, [tipInput]);
+
+  useEffect(() => {
+    if (currentUser?.isAdmin && showAdmin) {
+      const q = query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(200));
+      const unsubscribe1 = onSnapshot(q, (snapshot) => {
+        setLogs(snapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+        );
+      });
+
+      const qu = collection(db, 'users');
+      const unsubscribe2 = onSnapshot(qu, (snapshot) => {
+        setUsersList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
+      return () => {
+        unsubscribe1();
+        unsubscribe2();
+      };
+    }
+  }, [currentUser, showAdmin]);
+
+  useEffect(() => {
+    const handleChildReady = (event: MessageEvent) => {
+      // Quan una app filla diu que està a punt, li enviem el TIP de l'agent
+      if (event.data?.type === 'APP_READY' && currentUser?.tip) {
+        const displayTip = currentUser.tip.startsWith('PG') ? currentUser.tip.slice(2).replace(/^0+/, '') : currentUser.tip;
+        console.log("App filla preparada. Re-enviant TIP per sincronització:", displayTip);
+        const iframes = document.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+          if (iframe.contentWindow) {
+            iframe.contentWindow.postMessage(
+              { type: 'AGENT_TIP', tip: displayTip },
+              '*'
+            );
+          }
+        });
+      }
+    };
+    window.addEventListener('message', handleChildReady);
+    return () => window.removeEventListener('message', handleChildReady);
+  }, [currentUser]);
+
+  const logActivity = async (action: string, metadata: any = {}) => {
+    if (!currentUser) return;
+
+    try {
+      await addDoc(collection(db, 'logs'), {
+        tip: currentUser.tip,
+        name: currentUser.name,
+        action,
+        timestamp: serverTimestamp(),
+        ...metadata
+      });
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  const filteredLinks = APP_LINKS;
+  const handleAuth = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!isTipValidated || !tempUserData) return;
+
+    if (tempUserData.firstLogin) {
+      if (pin.length !== 4) {
+        setError('El PIN ha de tenir 4 dígits.');
+        return;
+      }
+      if (pin !== confirmPin) {
+        setError('Els PINs no coincideixen.');
+        return;
+      }
+
+      try {
+        await updateDoc(doc(db, 'users', tempUserData.tip), {
+          pin: pin,
+          firstLogin: false
+        });
+        const finalUser = { tip: tempUserData.tip, name: tempUserData.name, isAdmin: false };
+        setCurrentUser(finalUser);
+        setIsAuthenticated(true);
+        logActivity('Configuració inicial PIN');
+      } catch (err) {
+        setError('Error guardant el PIN.');
+      }
+    } else {
+      if (pin === tempUserData.pin) {
+        setCurrentUser({ tip: tempUserData.tip, name: tempUserData.name, isAdmin: tempUserData.isAdmin });
+        setIsAuthenticated(true);
+        logActivity('Inici de sessió');
+      } else {
+        setError('PIN incorrecte.');
+        setPin('');
+      }
+    }
+  };
+
+  const handleAdminPinReset = async (userTip: string) => {
+    try {
+      await updateDoc(doc(db, 'users', userTip), {
+        pin: '5085', // Default for reset, will trigger registration flow
+        firstLogin: true
+      });
+      logActivity('Restabliment PIN (Admin)', { target: userTip });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleUserStatus = async (userTip: string, currentStatus: string) => {
+    try {
+      await updateDoc(doc(db, 'users', userTip), {
+        status: currentStatus === 'off' ? 'on' : 'off'
+      });
+      logActivity('Canvi estat agent (Admin)', { target: userTip, status: currentStatus === 'off' ? 'on' : 'off' });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCreateUser = async (tip: string, name: string) => {
+    try {
+      // Format tip
+      const digits = tip.replace(/\D/g, '');
+      const searchTip = 'PG' + digits.padStart(6, '0');
+
+      await setDoc(doc(db, 'users', searchTip), {
+        tip: searchTip,
+        name: name.toUpperCase(),
+        pin: '5085',
+        firstLogin: true,
+        status: 'on'
+      });
+      logActivity('Alta nou agent (Admin)', { target: searchTip });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleUpdateUserName = async (userTip: string, newName: string) => {
+    try {
+      await updateDoc(doc(db, 'users', userTip), {
+        name: newName.toUpperCase()
+      });
+      logActivity('Canvi nom agent (Admin)', { target: userTip, name: newName.toUpperCase() });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const iframeUrl = useMemo(() => {
+    if (!activeApp) return '';
+    return `${activeApp.url}${activeApp.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
+  }, [activeApp?.id, iframeKey]);
+
+  // Sol·licitar permís de micròfon quan s'obre qualsevol app
+  useEffect(() => {
+    if (activeApp) {
+      navigator.mediaDevices?.getUserMedia({ audio: true })
+        .then(stream => stream.getTracks().forEach(t => t.stop()))
+        .catch(() => { }); // Silenciar errors si l'usuari deneega
+    }
+  }, [activeApp?.id]);
+
+  // Receptor de costos de les apps filles
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'COST_UPDATE' && event.data?.cost) {
+        logActivity('Cost de servei', {
+          cost: parseFloat(event.data.cost),
+          app: event.data.app || activeApp?.title || 'Desconeguda',
+          service: event.data.service || 'Servei IA'
+        });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [activeApp]);
+
+  if (activeApp) {
+    return (
+      <div className="fixed inset-0 z-[1000] bg-black flex flex-col">
+        <div className="bg-[#0f172a] border-b border-white/10 p-2 flex items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-mossos-blue rounded-lg flex items-center justify-center">
+              <activeApp.icon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-white text-xs font-black uppercase tracking-wider">{activeApp.title}</h3>
+              <p className="text-slate-500 text-[8px] font-mono">TÚNEL SEGUR ACTIU</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {currentUser && (
+              <>
+                <div className="hidden sm:flex items-center bg-black/30 border border-white/10 rounded-lg px-2 py-1 mr-4 ml-4">
+                  <AgentBadge tip={currentUser.tip} className="scale-[2] origin-right flex-shrink-0" />
+                </div>
+                <div className="w-px h-4 bg-white/10 mx-1 hidden sm:block" />
+              </>
+            )}
+            <button
+              title="Anar a la Pàgina Principal"
+              onClick={() => { logActivity('Tornar a Pàgina Principal', { app: activeApp.title }); setActiveApp(null); }}
+              className="flex items-center gap-2 p-2 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-white text-[10px] font-black uppercase tracking-wider transition-colors"
+            >
+              <Home className="w-4 h-4" /> Pàgina Principal
+            </button>
+            <div className="w-px h-4 bg-white/10 mx-2" />
+            <button title="Forçar recàrrega d'última versió" onClick={() => setIframeKey(k => k + 1)} className="flex items-center gap-2 p-2 px-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors"><RefreshCw className="w-4 h-4" /> Recarregar</button>
+          </div>
+        </div>
+        <div className="flex-1 w-full h-full bg-white relative">
+          <iframe
+            key={iframeKey}
+            src={iframeUrl}
+            className="w-full h-full border-none"
+            title={activeApp.title}
+            allow="microphone; camera"
+            onLoad={(e) => {
+              // Enviem el TIP de l'agent a l'app filla un cop carregada
+              const iframe = e.currentTarget as HTMLIFrameElement;
+              if (currentUser?.tip && iframe.contentWindow) {
+                const displayTip = currentUser.tip.startsWith('PG') ? currentUser.tip.slice(2).replace(/^0+/, '') : currentUser.tip;
+                iframe.contentWindow.postMessage(
+                  { type: 'AGENT_TIP', tip: displayTip },
+                  '*'
+                );
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 font-sans selection:bg-mossos-red selection:text-white">
-        {/* Background Decorative Elements */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-mossos-blue/20 blur-[120px] rounded-full" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-mossos-red/10 blur-[120px] rounded-full" />
-        </div>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md relative z-10"
-        >
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden">
-            <div className="p-10 text-center border-b border-white/5">
-              <motion.div 
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                className="inline-flex items-center justify-center w-20 h-20 bg-mossos-blue rounded-3xl shadow-2xl mb-6 border border-white/10"
-              >
-                <ShieldCheck className="w-10 h-10 text-white" />
-              </motion.div>
-              <h1 className="text-2xl font-black text-white tracking-tight mb-2 uppercase">Terminal d'Accés</h1>
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">Facilitador per patrulles i Atenea</p>
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 font-sans text-white">
+        <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+          {isTipValidated && (
+            <div className="absolute top-0 right-0 p-4">
+              <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 animate-pulse">Agent Validat</div>
             </div>
-            
-            <form onSubmit={handleLogin} className="p-10">
-              <div className="mb-8">
-                <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-3 ml-1">Codi d'Identificació (PIN)</label>
-                <div className="relative">
-                  <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input 
-                    type="password"
-                    maxLength={4}
-                    placeholder="••••"
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 pl-14 pr-4 text-2xl tracking-[1em] text-center text-white focus:outline-none focus:ring-2 focus:ring-mossos-blue focus:bg-white/10 transition-all placeholder:text-slate-700"
-                    value={pin}
-                    onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                    autoFocus
-                  />
-                </div>
-                <AnimatePresence>
-                  {error && (
-                    <motion.p 
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="text-mossos-red text-xs font-bold mt-4 flex items-center gap-2 justify-center"
-                    >
-                      <AlertCircle className="w-4 h-4" /> {error}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
-              
-              <button 
-                type="submit"
-                className="w-full bg-mossos-blue hover:bg-blue-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-900/40 flex items-center justify-center gap-3 transition-all active:scale-[0.98] uppercase tracking-widest text-sm"
-              >
-                Validar Credencials <ChevronRight className="w-5 h-5" />
-              </button>
-            </form>
+          )}
+
+          <div className="text-center mb-6 lg:mb-8">
+            <div className={`inline-flex items-center justify-center w-48 h-64 lg:w-[250px] lg:h-[333px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast`}>
+              <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tight">ACCÈS APPS FACILITADORES TRÀNSIT</h1>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">Personal Autoritzat • UNITAT DE TRÀNSIT</p>
           </div>
-          <p className="text-center mt-8 text-slate-600 text-[10px] font-mono uppercase tracking-[0.3em]">
-            Ús exclusiu per a personal autoritzat
-          </p>
-        </motion.div>
+
+          <form onSubmit={handleAuth} className="space-y-6">
+            <div>
+              <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">Número TIP</label>
+              <div className="relative">
+                <input
+                  type="text" placeholder="Ex: 2941"
+                  className={`w-full bg-white/5 border rounded-2xl py-4 px-6 text-xl text-white outline-none transition-all ${isTipValidated ? 'border-emerald-500 bg-emerald-500/5' : 'border-white/10 focus:border-mossos-blue'}`}
+                  value={tipInput} onChange={(e) => setTipInput(e.target.value)} maxLength={8}
+                  autoFocus
+                />
+                {isTipValidated && <ShieldCheck className="absolute right-5 top-1/2 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {isTipValidated && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-6 overflow-hidden">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl text-center">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">AGENT VALIDAT: {tempUserData?.name}</p>
+                    {tempUserData?.firstLogin && <p className="text-[8px] text-slate-400 uppercase mt-1">Si us plau, crea el teu PIN personal de 4 xifres</p>}
+                  </div>
+
+                  {tempUserData?.firstLogin ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">Crea el teu PIN</label>
+                        <div className="relative">
+                          <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <input type="password" maxLength={4} placeholder="••••" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-2xl tracking-[1em] text-center text-white outline-none focus:ring-2 focus:ring-emerald-500" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">Confirma el teu PIN</label>
+                        <div className="relative">
+                          <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                          <input type="password" maxLength={4} placeholder="••••" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-2xl tracking-[1em] text-center text-white outline-none focus:ring-2 focus:ring-emerald-500" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">Entra el teu PIN personal</label>
+                      <div className="relative">
+                        <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                        <input type="password" maxLength={4} placeholder="••••" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-2xl tracking-[1em] text-center text-white outline-none focus:ring-2 focus:ring-mossos-blue" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {error && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 justify-center bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <p className="text-red-500 text-[10px] font-black uppercase tracking-widest">{error}</p>
+              </motion.div>
+            )}
+
+            <button
+              type="submit" disabled={!isTipValidated}
+              className={`w-full py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-95 ${isTipValidated ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20' : 'bg-slate-700 cursor-not-allowed opacity-50'}`}
+            >
+              {tempUserData?.firstLogin ? 'Registrar PIN i Accedir' : 'Validar Credencials'}
+            </button>
+          </form>
+
+          {/* Botó de contacte discret */}
+          <ContactButton />
+
+          <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-1 opacity-30">
+            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2"><AgentBadge tip="5085" /> • Versió 2.43</p>
+            <p className="text-[7px] font-medium uppercase tracking-widest text-slate-500">SISTEMA FACILITADOR TRÀNSIT • AES-256</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen lg:h-screen bg-[#0a0f1a] text-slate-200 font-sans selection:bg-mossos-red selection:text-white flex flex-col overflow-y-auto lg:overflow-hidden relative">
-      {/* HUD Grid Background */}
-      <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
-           style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
-      <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+    <div className="min-h-screen lg:h-screen bg-[#0a0f1a] text-slate-200 font-sans flex flex-col overflow-hidden relative">
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
 
-      {/* Top Warning Bar - Critical Info */}
-      <div className="bg-mossos-red/90 backdrop-blur-md text-white py-1.5 px-6 flex items-center justify-center gap-3 shadow-lg relative z-[100] border-b border-white/10 shrink-0">
-        <div className="w-2 h-2 rounded-full bg-white animate-pulse shadow-[0_0_8px_#FFFFFF]" />
-        <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-          AVÍS CRÍTIC DE PRIVADESA: Prohibit introduir dades personals o privades als informes.
-        </span>
-      </div>
-
-      <div className="flex flex-1 flex-col overflow-hidden relative z-10">
-        {/* Header - HUD Style */}
-        <header className="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 px-4 lg:px-8 py-4 lg:py-6 flex flex-col lg:flex-row justify-between items-center gap-4 lg:gap-6 shadow-2xl shrink-0">
-          <div className="flex items-center gap-4 lg:gap-6 w-full lg:w-auto">
-            <div className="relative shrink-0">
-              <div className="absolute inset-0 bg-mossos-blue blur-xl opacity-20 animate-pulse" />
-              <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-mossos-blue to-blue-900 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-2xl border border-white/20 relative z-10">
-                <ShieldCheck className="w-8 h-8 lg:w-10 lg:h-10 text-white" />
-              </div>
-            </div>
-            <div className="flex-1 lg:flex-none">
-              <h1 className="text-xl lg:text-3xl font-black text-white tracking-tighter uppercase leading-none mb-1 flex items-center gap-2 lg:gap-3">
-                MOSSOS D'ESQUADRA
-                <span className="text-[8px] lg:text-[10px] bg-mossos-red px-1.5 lg:px-2 py-0.5 rounded font-bold tracking-widest">LIVE</span>
-              </h1>
-              <div className="flex flex-col lg:flex-row lg:items-center gap-1 lg:gap-4">
-                <h2 className="text-blue-400 text-[10px] lg:text-sm font-black uppercase tracking-[0.1em] lg:tracking-[0.2em]">Unitat de Trànsit • Atenea</h2>
-                <span className="hidden lg:block h-px w-8 bg-slate-700" />
-                <div className="flex items-center gap-2 bg-blue-500/10 px-2 lg:px-3 py-0.5 lg:py-1 rounded-lg border border-blue-500/20 w-fit">
-                  <KeyRound className="w-3 h-3 lg:w-4 lg:h-4 text-blue-400" />
-                  <span className="text-[8px] lg:text-[10px] font-black text-blue-300 uppercase tracking-widest">AES-256 Activa</span>
-                </div>
-              </div>
+      <header className="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 px-8 py-6 flex justify-between items-center shadow-2xl shrink-0">
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 flex items-center justify-center rounded-2xl overflow-hidden shadow-lg border border-white/10 animate-pulse-fast">
+            <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">MOSSOS D'ESQUADRA</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
+              {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center justify-between lg:justify-end gap-4 lg:gap-8 w-full lg:w-auto border-t lg:border-t-0 border-white/5 pt-4 lg:pt-0">
-            <div className="flex flex-col items-start lg:items-end">
-              <div className="flex items-center gap-3 lg:gap-4 mb-1">
-                <div className="flex flex-col items-start lg:items-end order-2 lg:order-1">
-                  <span className="text-[8px] lg:text-[9px] font-black text-slate-500 uppercase tracking-widest">Data i Hora Local</span>
-                  <span className="text-2xl lg:text-4xl font-mono font-black text-white tracking-tighter tabular-nums">
-                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                  </span>
-                </div>
-                <Clock className="w-6 h-6 lg:w-8 lg:h-8 text-mossos-red animate-pulse order-1 lg:order-2" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                <span className="text-[8px] lg:text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] lg:tracking-[0.4em]">@5085 • TERMINAL OPERATIVA</span>
-              </div>
+        <div className="flex items-center gap-8">
+          <div className="text-right flex items-center gap-6">
+            {currentUser?.isAdmin && (
+              <button onClick={() => setShowAdmin(!showAdmin)} className={`p-4 rounded-xl border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}><Users className="w-6 h-6" /></button>
+            )}
+            <div className="hidden lg:block text-right">
+              <span className="block text-4xl font-mono font-black text-white tracking-tighter tabular-nums leading-none">
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 mb-2">
+                {currentTime.toLocaleDateString('ca-ES', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+              </span>
+              <span className="text-[12px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-end gap-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <AgentBadge tip={currentUser?.tip || ''} className="scale-[3] origin-right ml-2 mr-4" /> • {currentUser?.name}
+              </span>
             </div>
-            
-            <button 
-              onClick={() => setIsAuthenticated(false)}
-              className="p-3 lg:p-4 rounded-xl lg:rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-mossos-red hover:text-white hover:border-mossos-red transition-all shadow-lg group shrink-0"
-              title="Sortir del Sistema"
-            >
-              <LogOut className="w-5 h-5 lg:w-7 lg:h-7 group-hover:scale-110 transition-transform" />
-            </button>
+            <button onClick={() => { logActivity('Tancament de sessió'); setIsAuthenticated(false); setCurrentUser(null); setShowAdmin(false); setTipInput(''); setPin(''); setConfirmPin(''); setIsTipValidated(false); setTempUserData(null); }} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-mossos-red hover:text-white transition-all"><LogOut className="w-6 h-6" /></button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Content Area */}
-        <main className="flex-1 p-4 lg:p-10 flex flex-col min-h-0">
-          <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
-            <div className="mb-4 lg:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
-              <div className="flex items-center gap-3 lg:gap-4">
-                <div className="w-1 h-4 lg:h-6 bg-mossos-red rounded-full" />
-                <h3 className="text-[10px] lg:text-xs font-black tracking-[0.2em] lg:tracking-[0.4em] text-slate-400 uppercase">
-                  Mòduls Operatius Disponibles [{filteredLinks.length}]
-                </h3>
-              </div>
-              <div className="text-[8px] lg:text-[10px] font-mono text-slate-500 uppercase tracking-widest bg-white/5 px-3 lg:px-4 py-1 rounded-full border border-white/5 w-fit">
-                Status: Secure Connection Established
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
-              {filteredLinks.map((link, index) => (
-                <AppCard key={link.id} link={link} index={index} />
+      <main className="flex-1 p-10 overflow-y-auto">
+        <div className="max-w-7xl mx-auto h-full">
+          {showAdmin && currentUser?.isAdmin ? (
+            <AdminDashboard logs={logs} users={usersList} onResetPin={handleAdminPinReset} onToggleStatus={handleToggleUserStatus} onCreateUser={handleCreateUser} onUpdateName={handleUpdateUserName} />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+              {APP_LINKS.map((link, index) => (
+                <AppCard key={link.id} link={link} index={index} onClick={() => { logActivity('Obertura App', { app: link.title }); setActiveApp(link); }} />
               ))}
             </div>
-          </div>
-        </main>
-      </div>
+          )}
+        </div>
+      </main>
+      <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 text-center flex justify-between items-center px-10">
+        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.43 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-2"><AgentBadge tip="5085" /> • VERSIÓ 2.43</p>
+      </footer>
     </div>
   );
 }
 
-function AppCard({ link, index }: { link: AppLink, index: number, key?: string | number }) {
-  const Icon = link.icon;
-  
+function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser, onUpdateName }: { logs: any[], users: any[], onResetPin: (tip: string) => void, onToggleStatus: (tip: string, current: string) => void, onCreateUser: (tip: string, name: string) => void, onUpdateName: (tip: string, name: string) => void }) {
+  const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos'>('activity');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingTip, setEditingTip] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [newTip, setNewTip] = useState('');
+  const [newName, setNewName] = useState('');
+  const filteredUsers = users.filter(u => u.tip.includes(searchTerm.toUpperCase()) || u.name.includes(searchTerm.toUpperCase()));
+
+  const usageRanking = useMemo(() => {
+    const counts: Record<string, { name: string, count: number, tip: string, totalCost: number }> = {};
+    logs.forEach(log => {
+      if (!log.tip || log.tip === 'PG005085') return;
+      if (!counts[log.tip]) {
+        counts[log.tip] = { name: log.name, tip: log.tip, count: 0, totalCost: 0 };
+      }
+      counts[log.tip].count++;
+      if (log.cost) {
+        counts[log.tip].totalCost += parseFloat(log.cost);
+      }
+    });
+    return Object.values(counts).sort((a, b) => b.count - a.count);
+  }, [logs]);
+
+  const monthlyCosts = useMemo(() => {
+    const months: Record<string, { total: number, agents: Record<string, { name: string, cost: number, count: number }> }> = {};
+
+    logs.forEach(log => {
+      if (!log.cost || !log.timestamp) return;
+      const date = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+      // Format: YYYY-MM
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!months[monthKey]) {
+        months[monthKey] = { total: 0, agents: {} };
+      }
+
+      const costParsed = parseFloat(log.cost);
+      months[monthKey].total += costParsed;
+
+      if (!months[monthKey].agents[log.tip]) {
+        months[monthKey].agents[log.tip] = { name: log.name || log.tip, cost: 0, count: 0 };
+      }
+
+      months[monthKey].agents[log.tip].cost += costParsed;
+      months[monthKey].agents[log.tip].count++;
+    });
+
+    // Convert to sorted array
+    return Object.keys(months).sort((a, b) => b.localeCompare(a)).map(monthKey => {
+      const [year, month] = monthKey.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const monthName = date.toLocaleDateString('ca-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+
+      return {
+        key: monthKey,
+        name: monthName,
+        total: months[monthKey].total,
+        agents: Object.entries(months[monthKey].agents)
+          .map(([tip, data]) => ({ tip, ...data }))
+          .sort((a, b) => b.cost - a.cost)
+      };
+    });
+  }, [logs]);
+
   return (
-    <motion.a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.05, duration: 0.4 }}
-      className="group relative bg-[#1e293b]/40 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-5 lg:p-6 border border-white/10 hover:border-mossos-blue/50 hover:bg-[#1e293b]/60 transition-all duration-500 shadow-xl flex flex-col justify-between h-full group overflow-hidden min-h-[160px] lg:min-h-0"
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6 h-full">
+      <div className="flex gap-4 p-2 bg-white/5 rounded-2xl border border-white/10 w-fit flex-wrap">
+        <button onClick={() => setActiveTab('activity')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'activity' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'}`}>Activitat Recent</button>
+        <button onClick={() => setActiveTab('users')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'}`}>Gestió Agents</button>
+        <button onClick={() => setActiveTab('ranking')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'ranking' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'}`}>Rànquing d'Ús</button>
+        <button onClick={() => setActiveTab('costos')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'costos' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}>Despesa Mensual</button>
+      </div>
+
+      {activeTab === 'users' && isAdding && (
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-3xl flex flex-wrap items-end gap-6 shadow-xl">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-[8px] font-black uppercase text-amber-500 mb-2">Número TIP</label>
+            <input type="text" placeholder="Ex: 1234" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm text-white outline-none focus:ring-1 focus:ring-amber-500" value={newTip} onChange={(e) => setNewTip(e.target.value)} />
+          </div>
+          <div className="flex-[2] min-w-[200px]">
+            <label className="block text-[8px] font-black uppercase text-amber-500 mb-2">Nom de l'Agent</label>
+            <input type="text" placeholder="Ex: JOAN PUIG" className="w-full bg-black/40 border border-white/10 rounded-xl py-3 px-4 text-sm text-white outline-none focus:ring-1 focus:ring-amber-500" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => { onCreateUser(newTip, newName); setIsAdding(false); setNewTip(''); setNewName(''); }} className="bg-amber-500 text-black px-8 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-amber-400 transition-all active:scale-95">Donar d'Alta</button>
+            <button onClick={() => setIsAdding(false)} className="bg-white/5 text-slate-400 px-6 py-3 rounded-xl text-[10px] font-black uppercase hover:bg-white/10 transition-all">Cancel·lar</button>
+          </div>
+        </motion.div>
+      )}
+
+      <div className="flex-1 bg-white/5 border border-white/10 rounded-3xl overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-white/10 bg-black/20 flex justify-between items-center">
+          <div className="flex items-center gap-3"><Activity className={`w-5 h-5 ${activeTab === 'costos' ? 'text-emerald-500' : 'text-amber-500'}`} /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{activeTab === 'activity' ? 'Registre d\'Operacions' : activeTab === 'users' ? 'Base de dades d\'Agents' : activeTab === 'costos' ? 'Informe de Costos mensuals' : 'Estadístic de Rànquing'}</span></div>
+          <div className="flex items-center gap-4">
+            {activeTab === 'users' && (
+              <>
+                <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase hover:bg-emerald-500/20 transition-all active:scale-95">
+                  <UserPlus className="w-4 h-4" /> Nou Agent
+                </button>
+                <input type="text" placeholder="Cercar agent..." className="bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-xs text-white outline-none focus:ring-1 focus:ring-amber-500 w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {activeTab === 'activity' ? (
+            logs.filter(log => log.tip !== 'PG005085').map((log, i) => (
+              <div key={i} className="flex justify-between p-4 bg-black/20 border border-white/5 rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <AgentBadge tip={log.tip} className="scale-125 mx-2" />
+                  <div><p className="text-[10px] font-black text-white uppercase">{log.name}</p><p className="text-[8px] font-bold text-amber-500 uppercase">{log.action} {log.app && `• ${log.app}`} {log.target && `→ ${log.target}`}</p></div>
+                </div>
+                <div className="text-right text-[9px] font-mono text-slate-500">{log.timestamp?.toDate().toLocaleString()}</div>
+              </div>
+            ))
+          ) : activeTab === 'costos' ? (
+            <div className="space-y-6">
+              {monthlyCosts.map((month) => (
+                <div key={month.key} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden p-6 space-y-4">
+                  <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                    <h3 className="text-xl font-black text-amber-500">{month.name}</h3>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Despesa Mensual</p>
+                      <p className="text-2xl font-black text-emerald-500">{month.total.toFixed(4)} €</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {month.agents.map((agent) => (
+                      <div key={agent.tip} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex justify-between items-center">
+                        <div>
+                          <p className="text-[10px] font-black text-white uppercase">{agent.name}</p>
+                          <AgentBadge tip={agent.tip} />
+                        </div>
+                        <div className="text-right flex flex-col items-end">
+                          <p className="text-sm font-black text-emerald-500">{agent.cost.toFixed(4)} €</p>
+                          <p className="text-[8px] font-bold text-slate-500">{agent.count} operacions</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {monthlyCosts.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha costos registrats per mostrar</p>}
+            </div>
+          ) : activeTab === 'ranking' ? (
+            <div className="space-y-2">
+              {usageRanking.map((rank, i) => (
+                <div key={i} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 rounded-2xl">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-amber-500 text-black flex items-center justify-center font-black text-[12px]">{i + 1}</div>
+                    <div><p className="text-[10px] font-black text-white uppercase">{rank.name}</p><AgentBadge tip={rank.tip} /></div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-xl font-black text-amber-500">{rank.count}</span>
+                    <span className="text-[8px] font-black uppercase text-slate-500">OPERACIONS</span>
+                    {rank.totalCost > 0 && (
+                      <span className="text-[10px] font-black text-emerald-500 mt-1">{rank.totalCost.toFixed(3)} €</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {usageRanking.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha prou dades per generar el rànquing</p>}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredUsers.map((user) => (
+                <div key={user.tip} className={`p-5 bg-black/20 border rounded-2xl flex flex-col gap-4 transition-all ${user.status === 'off' ? 'border-red-500/30' : 'border-white/5'}`}>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      {editingTip === user.tip ? (
+                        <div className="flex items-center gap-2 mb-1">
+                          <input
+                            type="text"
+                            className="bg-black/40 border border-amber-500/50 rounded px-2 py-1 text-xs text-white uppercase outline-none w-full"
+                            value={editingName}
+                            onChange={(e) => setEditingName(e.target.value)}
+                            autoFocus
+                          />
+                          <button title="Guardar nom" onClick={() => { onUpdateName(user.tip, editingName); setEditingTip(null); }} className="p-1 bg-emerald-500 text-black rounded hover:bg-emerald-400"><Check className="w-3 h-3" /></button>
+                          <button title="Cancel·lar edició" onClick={() => setEditingTip(null)} className="p-1 bg-white/10 text-slate-400 rounded hover:bg-white/20"><X className="w-3 h-3" /></button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 group/name">
+                          <h4 className={`text-sm font-black ${user.status === 'off' ? 'text-slate-500 line-through' : 'text-white'}`}>{user.name}</h4>
+                          <button title="Editar nom" onClick={() => { setEditingTip(user.tip); setEditingName(user.name); }} className="opacity-0 group-hover/name:opacity-100 p-1 text-slate-500 hover:text-amber-500 transition-all"><Edit2 className="w-3 h-3" /></button>
+                        </div>
+                      )}
+                      <AgentBadge tip={user.tip} />
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`text-[7px] px-1.5 py-0.5 rounded font-black uppercase ${user.isAdmin ? 'bg-red-500' : user.status === 'off' ? 'bg-red-900 text-red-100' : user.firstLogin ? 'bg-amber-500 text-black' : 'bg-emerald-500'}`}>{user.isAdmin ? 'ADMIN' : user.status === 'off' ? 'BAIXA' : user.firstLogin ? 'Pendent' : 'Actiu'}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    {!user.isAdmin && (
+                      <>
+                        <button onClick={() => onResetPin(user.tip)} className="flex-1 bg-white/5 border border-white/10 py-2 rounded-xl text-[8px] font-black uppercase flex items-center justify-center gap-2 hover:bg-white/10 active:scale-95 transition-all"><RefreshCw className="w-3 h-3" /> Reset</button>
+                        <button
+                          onClick={() => onToggleStatus(user.tip, user.status || 'on')}
+                          className={`flex-1 border py-2 rounded-xl text-[8px] font-black uppercase flex items-center justify-center gap-2 active:scale-95 transition-all ${user.status === 'off' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20'}`}
+                        >
+                          {user.status === 'off' ? 'DONAR D\'ALTA' : 'DONAR DE BAIXA'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function AppCard({ link, index, onClick }: { link: AppLink, index: number, onClick: () => void }) {
+  const Icon = link.icon;
+  return (
+    <motion.button
+      onClick={() => link.status !== 'maintenance' && onClick()}
+      disabled={link.status === 'maintenance'}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className={`group relative bg-[#1e293b]/40 backdrop-blur-sm rounded-3xl p-6 lg:p-8 border border-white/10 flex flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[280px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue/50 hover:bg-[#1e293b]/60 transition-all duration-500 shadow-xl'}`}
     >
-      {/* Tactical Corner Lines */}
-      <div className="absolute top-0 left-0 w-3 lg:w-4 h-3 lg:h-4 border-t-2 border-l-2 border-white/10 group-hover:border-mossos-blue/50 transition-colors" />
-      <div className="absolute top-0 right-0 w-3 lg:w-4 h-3 lg:h-4 border-t-2 border-r-2 border-white/10 group-hover:border-mossos-blue/50 transition-colors" />
-      <div className="absolute bottom-0 left-0 w-3 lg:w-4 h-3 lg:h-4 border-b-2 border-l-2 border-white/10 group-hover:border-mossos-blue/50 transition-colors" />
-      <div className="absolute bottom-0 right-0 w-3 lg:w-4 h-3 lg:h-4 border-b-2 border-r-2 border-white/10 group-hover:border-mossos-blue/50 transition-colors" />
-
-      {/* Background Glow */}
-      <div className="absolute -bottom-20 -right-20 w-32 lg:w-40 h-32 lg:h-40 bg-mossos-blue/5 blur-[40px] lg:blur-[60px] group-hover:bg-mossos-blue/10 transition-colors duration-500" />
-      
-      <div className="flex justify-between items-start relative z-10">
-        <div className={`w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl flex items-center justify-center transition-all duration-500 shadow-2xl border border-white/10 ${
-          link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' :
-          link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' :
-          'bg-purple-600/20 text-purple-400'
-        } group-hover:scale-110 group-hover:bg-mossos-blue group-hover:text-white`}>
-          <Icon className="w-6 h-6 lg:w-8 lg:h-8" />
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="flex items-center gap-2 bg-black/40 px-2 lg:px-3 py-0.5 lg:py-1 rounded-full border border-white/5">
-            <div className="w-1 h-1 lg:w-1.5 lg:h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[8px] lg:text-[9px] font-black text-emerald-400 uppercase tracking-widest">Secure</span>
+      {link.status === 'maintenance' && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="bg-amber-500 text-black px-8 py-2 -rotate-12 font-black text-xl tracking-widest uppercase shadow-2xl border-y-2 border-dashed border-black/50 overflow-hidden w-[120%] text-center">
+            En Construcció
           </div>
-          <span className="text-[7px] lg:text-[8px] font-mono text-slate-500 uppercase tracking-tighter">{link.code}</span>
         </div>
+      )}
+      <div className={`flex justify-between items-start z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
+        <div className={`w-14 h-14 lg:w-18 lg:h-18 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-7 h-7 lg:w-9 lg:h-9" /></div>
+        <span className="text-[8px] lg:text-xs font-mono text-slate-600">{link.code}</span>
       </div>
-
-      <div className="relative z-10 mt-4 lg:mt-6">
-        <h3 className="text-lg lg:text-2xl font-black text-white group-hover:text-blue-400 transition-colors duration-300 uppercase tracking-tighter leading-none mb-2 lg:mb-3">
-          {link.title}
-        </h3>
-        <p className="text-slate-400 text-[10px] lg:text-sm font-medium leading-relaxed line-clamp-2 lg:line-clamp-3 group-hover:text-slate-300 transition-colors">
-          {link.description}
-        </p>
-      </div>
-      
-      <div className="flex items-center justify-between pt-4 lg:pt-6 border-t border-white/5 relative z-10 mt-4 lg:mt-6">
+      <div className={`mt-6 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}><h3 className="text-xl lg:text-2xl font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-2 lg:mb-3">{link.title}</h3><p className="text-slate-400 text-xs lg:text-sm font-medium lg:leading-relaxed line-clamp-3">{link.description}</p></div>
+      <div className={`flex items-center justify-between pt-6 border-t border-white/5 mt-6 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
         <div className="flex items-center gap-2">
-          <div className={`w-1.5 h-1.5 rounded-full ${
-            link.category === 'dictat' ? 'bg-blue-500' :
-            link.category === 'imatges' ? 'bg-emerald-500' :
-            'bg-purple-500'
-          }`} />
-          <span className="text-[8px] lg:text-[10px] font-black uppercase tracking-[0.1em] lg:tracking-[0.2em] text-slate-500">
-            {link.category}
-          </span>
+          <div className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${link.category === 'dictat' ? 'bg-blue-500' : link.category === 'imatges' ? 'bg-emerald-500' : 'bg-purple-500'}`} />
+          <span className="text-[10px] lg:text-xs font-black uppercase text-slate-500">{link.category}</span>
         </div>
-        <div className="flex items-center gap-2 lg:gap-3 text-blue-400 font-black uppercase tracking-widest text-[10px] lg:text-xs opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all translate-x-0 lg:translate-x-4 lg:group-hover:translate-x-0">
-          <span className="hidden sm:inline">Executar</span>
-          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-mossos-blue text-white flex items-center justify-center shadow-2xl transform group-hover:rotate-12 transition-transform">
-            <ExternalLink className="w-4 h-4 lg:w-5 lg:h-5" />
-          </div>
+        <div className="flex items-center gap-3">
+          {link.category === 'imatges' && (
+            <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full">
+              <Monitor className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Versió Escriptori</span>
+            </div>
+          )}
+          {link.status !== 'maintenance' && (
+            <ExternalLink className="w-5 h-5 text-mossos-blue translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
+          )}
         </div>
       </div>
-    </motion.a>
+    </motion.button>
+  );
+}
+
+function ContactButton() {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="mt-8 text-center">
+      <button
+        type="button"
+        onClick={() => setShown(s => !s)}
+        className="text-slate-500 hover:text-white text-[11px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-3 mx-auto active:scale-95"
+      >
+        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-white/20">
+          <Mail className="w-4 h-4" />
+        </div>
+        Contacte amb Administrador
+      </button>
+      <AnimatePresence>
+        {shown && (
+          <motion.a
+            href="mailto:woodick604@gmail.com"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="inline-block mt-4 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono text-slate-400 hover:text-white hover:border-white/20 transition-all"
+          >
+            woodick604@gmail.com
+          </motion.a>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+function AgentBadge({ tip, className = "" }: { tip: string, className?: string }) {
+  const displayTip = tip.startsWith('PG') ? tip.slice(2).replace(/^0+/, '') : tip;
+  return (
+    <span className={`inline-flex items-center justify-center bg-black border border-amber-500 text-amber-500 font-black px-2 py-0.5 rounded-md text-[10px] leading-none shadow-sm ${className}`} style={{ minWidth: '3.5rem' }}>
+      {displayTip}
+    </span>
   );
 }

@@ -1,9 +1,9 @@
-import { 
-  Mic, 
-  Image, 
-  NotebookPen, 
-  ClipboardList, 
-  Zap, 
+import {
+  Mic,
+  Image,
+  NotebookPen,
+  ClipboardList,
+  Zap,
   FolderSearch,
   ExternalLink
 } from 'lucide-react';
@@ -30,9 +30,9 @@ export interface AppLink {
 export const APP_LINKS: AppLink[] = [
   {
     id: 'dictat-accidents',
-    title: 'Dictat d\'Accidents de Trànsit',
+    title: '1. Dictat d\'Accidents de Trànsit',
     description: 'Eina de dictat per veu per a la redacció ràpida d\'informes d\'accidents.',
-    url: 'https://accidents-evolucio-t-06-atenea-414823545629.us-west1.run.app/',
+    url: 'https://dictat-atenea-t06.web.app/',
     icon: Mic,
     category: 'dictat',
     status: 'online',
@@ -40,8 +40,8 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'renombrador-manual',
-    title: 'Reanomenador de Fotografies (Manual)',
-    description: 'Eina per al reanomenament manual i organització de fotografies de camp.',
+    title: '2. Reanomenador de Fotografies (Manual) (PER ATENEA)',
+    description: 'Eina per reduir, reanomenar manualment i organitzar fotografies de camp.',
     url: 'https://processador-imatges-accidents.web.app/',
     icon: Image,
     category: 'imatges',
@@ -50,7 +50,7 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'renombrador-auto',
-    title: 'Reanomenador de Fotografies (Auto)',
+    title: '3. Reanomenador de Fotografies (Auto) (PER ATENEA)',
     description: 'Plataforma per reduir i reanomenar fotos de forma totalment automàtica.',
     url: 'https://atenea-fotos.web.app/',
     icon: Image,
@@ -60,8 +60,8 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'informe-auto',
-    title: 'Informe Fotogràfic Automàtic',
-    description: 'Generador automàtic d\'informes fotogràfics tècnics.',
+    title: '4. Informe Fotogràfic Automàtic (PER JUTJATS o D\'ALTRES)',
+    description: 'Generador automàtic d\'informes fotogràfics tècnics. (Triga una mica a obrir-se)',
     url: 'https://infofoto-vector-art.web.app/',
     icon: NotebookPen,
     category: 'imatges',
@@ -70,9 +70,9 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'gestor-casos',
-    title: 'Simptomatologia DGT',
-    description: 'Simptomatologia compatible orientativa segons DGT. Correlació extrema de taxa d\'alcohol, pes i altura basada en estudis oficials de la DGT.',
-    url: 'https://simptomatologia-compatible-amb-la-taxa-segons-la-1000896180499.us-west1.run.app',
+    title: '5. Simptomatologia DGT',
+    description: 'Simptomatologia compatible segons DGT. Permet dictar o escriure les observacions i el sistema integra tota la informació automàticament.',
+    url: 'https://simptomatologia.web.app/',
     icon: ClipboardList,
     category: 'gestio',
     status: 'online',
@@ -80,9 +80,9 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'minutes',
-    title: 'Dictar Minutes',
-    description: 'Gestió i redacció de minutes policials mitjançant dictat per veu.',
-    url: 'https://dictat-policial-ia-1039421696609.us-west1.run.app/',
+    title: '6. Dictar Minutes / Diligència d\'Informe T-32',
+    description: 'Eina de gestió i dictat, a format policial cronològic i oficial.',
+    url: 'https://dictat-minutes.web.app/',
     icon: Mic,
     category: 'gestio',
     status: 'online',
