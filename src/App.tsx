@@ -30,7 +30,7 @@ import { doc, getDoc, updateDoc, setDoc, collection, addDoc, query, orderBy, lim
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [tipInput, setTipInput] = useState('');
+  const [tipInput, setTipInput] = useState(() => localStorage.getItem('agentTIP') || '');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [currentUser, setCurrentUser] = useState<{ tip: string, name: string, isAdmin?: boolean } | null>(null);
@@ -188,6 +188,7 @@ export default function App() {
         const finalUser = { tip: tempUserData.tip, name: tempUserData.name, isAdmin: false };
         setCurrentUser(finalUser);
         setIsAuthenticated(true);
+        localStorage.setItem('agentTIP', tipInput);
         logActivity('Configuració inicial PIN');
       } catch (err) {
         setError('Error guardant el PIN.');
@@ -196,6 +197,7 @@ export default function App() {
       if (pin === tempUserData.pin) {
         setCurrentUser({ tip: tempUserData.tip, name: tempUserData.name, isAdmin: tempUserData.isAdmin });
         setIsAuthenticated(true);
+        localStorage.setItem('agentTIP', tipInput);
         logActivity('Inici de sessió');
       } else {
         setError('PIN incorrecte.');
@@ -477,7 +479,7 @@ export default function App() {
                 <AgentBadge tip={currentUser?.tip || ''} className="scale-[3] origin-right ml-2 mr-4" /> • {currentUser?.name}
               </span>
             </div>
-            <button onClick={() => { logActivity('Tancament de sessió'); setIsAuthenticated(false); setCurrentUser(null); setShowAdmin(false); setTipInput(''); setPin(''); setConfirmPin(''); setIsTipValidated(false); setTempUserData(null); }} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-mossos-red hover:text-white transition-all"><LogOut className="w-6 h-6" /></button>
+            <button onClick={() => { logActivity('Tancament de sessió'); setIsAuthenticated(false); setCurrentUser(null); setShowAdmin(false); setPin(''); setConfirmPin(''); }} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-mossos-red hover:text-white transition-all"><LogOut className="w-6 h-6" /></button>
           </div>
         </div>
       </header>
