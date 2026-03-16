@@ -40,6 +40,11 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(process.cwd(), 'src'),
       },
     },
+    build: {
+      rollupOptions: {
+        external: (id) => id.startsWith('core-js/')
+      }
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.

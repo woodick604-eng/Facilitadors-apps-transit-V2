@@ -110,7 +110,7 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser?.isAdmin && showAdmin) {
-      const q = query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(200));
+      const q = query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(300));
       const unsubscribe1 = onSnapshot(q, (snapshot) => {
         setLogs(snapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
@@ -165,6 +165,24 @@ export default function App() {
       console.error(err);
     }
   };
+
+  // Computar agents actius (logs en els últims 30 minuts)
+  const activeAgents = useMemo(() => {
+    const now = new Date();
+    const threshold = 30 * 60 * 1000; // 30 minuts
+    const active = new Map();
+
+    logs.forEach(log => {
+      const logDate = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+      if (now.getTime() - logDate.getTime() < threshold && log.tip !== 'PG005085') {
+        if (!active.has(log.tip)) {
+          active.set(log.tip, { tip: log.tip, name: log.name, lastSeen: logDate });
+        }
+      }
+    });
+
+    return Array.from(active.values());
+  }, [logs]);
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
@@ -273,7 +291,7 @@ export default function App() {
     }
   }, [activeApp?.id]);
 
-  // Receptor de costos de les apps filles
+  // Receptor de costos i èxits de les apps filles
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'COST_UPDATE' && event.data?.cost) {
@@ -281,6 +299,15 @@ export default function App() {
           cost: parseFloat(event.data.cost),
           app: event.data.app || activeApp?.title || 'Desconeguda',
           service: event.data.service || 'Servei IA'
+        });
+      }
+
+      // Nou listener per a descàrregues o èxits
+      if (event.data?.type === 'DOWNLOAD_REPORT' || event.data?.type === 'REPORT_SUCCESS' || event.data?.type === 'DOWNLOAD_ZIP') {
+        logActivity('DESCÀRREGA / ÈXIT', {
+          app: event.data.app || activeApp?.title || 'Desconeguda',
+          filename: event.data.filename || event.data.file || 'Informe Generat',
+          status: 'success'
         });
       }
     };
@@ -303,6 +330,19 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {currentUser?.tip === 'PG005085' && (
+              <button
+                onClick={() => { logActivity('Obertura Dashboard (Iframe)'); setShowAdmin(!showAdmin); setActiveApp(null); }}
+                className={`p-2 rounded-lg border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+              >
+                <Users className="w-4 h-4" />
+                {activeAgents.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#0f172a] animate-pulse">
+                    {activeAgents.length}
+                  </span>
+                )}
+              </button>
+            )}
             {currentUser && (
               <>
                 <div className="hidden sm:flex items-center bg-black/30 border border-white/10 rounded-lg px-2 py-1 mr-4 ml-4">
@@ -350,7 +390,7 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 font-sans text-white">
-        <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+        <div className="w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
           {isTipValidated && (
             <div className="absolute top-0 right-0 p-4">
               <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 animate-pulse">Agent Validat</div>
@@ -358,7 +398,7 @@ export default function App() {
           )}
 
           <div className="text-center mb-6 lg:mb-8">
-            <div className={`inline-flex items-center justify-center w-48 h-64 lg:w-[250px] lg:h-[333px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast`}>
+            <div className={`inline-flex items-center justify-center w-60 h-80 lg:w-[312px] lg:h-[416px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast`}>
               <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
             </div>
             <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tight">ACCÈS APPS FACILITADORES TRÀNSIT</h1>
@@ -436,7 +476,7 @@ export default function App() {
           <ContactButton />
 
           <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-1 opacity-30">
-            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2"><AgentBadge tip="5085" /> • Versió 2.43</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2"><AgentBadge tip="5085" /> • Versió 2.44</p>
             <p className="text-[7px] font-medium uppercase tracking-widest text-slate-500">SISTEMA FACILITADOR TRÀNSIT • AES-256</p>
           </div>
         </div>
@@ -450,7 +490,7 @@ export default function App() {
 
       <header className="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 px-8 py-6 flex justify-between items-center shadow-2xl shrink-0">
         <div className="flex items-center gap-6">
-          <div className="w-20 h-20 flex items-center justify-center rounded-2xl overflow-hidden shadow-lg border border-white/10 animate-pulse-fast">
+          <div className="w-[100px] h-[100px] flex items-center justify-center rounded-2xl overflow-hidden shadow-lg border border-white/10 animate-pulse-fast">
             <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
           </div>
           <div>
@@ -464,8 +504,15 @@ export default function App() {
 
         <div className="flex items-center gap-8">
           <div className="text-right flex items-center gap-6">
-            {currentUser?.isAdmin && (
-              <button onClick={() => setShowAdmin(!showAdmin)} className={`p-4 rounded-xl border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}><Users className="w-6 h-6" /></button>
+            {currentUser?.tip === 'PG005085' && (
+              <button onClick={() => setShowAdmin(!showAdmin)} className={`relative p-4 rounded-xl border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}>
+                <Users className="w-6 h-6" />
+                {activeAgents.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#0f172a] animate-pulse font-black">
+                    {activeAgents.length}
+                  </span>
+                )}
+              </button>
             )}
             <div className="hidden lg:block text-right">
               <span className="block text-4xl font-mono font-black text-white tracking-tighter tabular-nums leading-none">
@@ -498,9 +545,55 @@ export default function App() {
         </div>
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 text-center flex justify-between items-center px-10">
-        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.43 • AES-256 ENCRYPTION ACTIVE</p>
-        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-2"><AgentBadge tip="5085" /> • VERSIÓ 2.43</p>
+        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.44 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-2"><AgentBadge tip="5085" /> • VERSIÓ 2.44</p>
       </footer>
+
+      {/* Botó Flotant d'Agents Actius (Sempre Visible per 5085) */}
+      {isAuthenticated && currentUser?.tip === 'PG005085' && (
+        <div className="fixed bottom-6 right-6 z-[2000] flex flex-col items-end gap-3 pointer-events-none">
+          <AnimatePresence>
+            {activeAgents.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 20 }}
+                className="bg-[#0f172a]/95 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-2xl w-64 pointer-events-auto mb-2"
+              >
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+                  <span className="text-[10px] font-black uppercase text-amber-500 tracking-widest">Agents en Actiu</span>
+                  <span className="bg-emerald-500/20 text-emerald-500 text-[10px] px-2 py-0.5 rounded-full font-black animate-pulse">{activeAgents.length}</span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {activeAgents.map(a => (
+                    <div key={a.tip} className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/5">
+                      <div>
+                        <p className="text-[10px] font-black text-white truncate w-32 uppercase">{a.name}</p>
+                        <AgentBadge tip={a.tip} className="scale-75 origin-left" />
+                      </div>
+                      <span className="text-[8px] font-mono text-slate-500">
+                        {a.lastSeen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <button
+            onClick={() => setShowAdmin(!showAdmin)}
+            className="pointer-events-auto group relative w-16 h-16 bg-amber-500 rounded-full flex items-center justify-center shadow-2xl shadow-amber-500/20 hover:scale-110 active:scale-95 transition-all"
+          >
+            <Users className="w-8 h-8 text-black" />
+            <div className="absolute inset-0 rounded-full bg-amber-500/20 animate-ping" />
+            {activeAgents.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-xs font-black w-7 h-7 rounded-full flex items-center justify-center border-4 border-[#0f172a]">
+                {activeAgents.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -516,15 +609,20 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
   const filteredUsers = users.filter(u => u.tip.includes(searchTerm.toUpperCase()) || u.name.includes(searchTerm.toUpperCase()));
 
   const usageRanking = useMemo(() => {
-    const counts: Record<string, { name: string, count: number, tip: string, totalCost: number }> = {};
+    const counts: Record<string, { name: string, count: number, tip: string, totalCost: number, appCounts: Record<string, number> }> = {};
     logs.forEach(log => {
       if (!log.tip || log.tip === 'PG005085') return;
       if (!counts[log.tip]) {
-        counts[log.tip] = { name: log.name, tip: log.tip, count: 0, totalCost: 0 };
+        counts[log.tip] = { name: log.name, tip: log.tip, count: 0, totalCost: 0, appCounts: {} };
       }
       counts[log.tip].count++;
       if (log.cost) {
         counts[log.tip].totalCost += parseFloat(log.cost);
+      }
+
+      const appName = log.app || (log.action === 'Obertura App' ? log.app : null);
+      if (appName) {
+        counts[log.tip].appCounts[appName] = (counts[log.tip].appCounts[appName] || 0) + 1;
       }
     });
     return Object.values(counts).sort((a, b) => b.count - a.count);
@@ -571,6 +669,87 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
     });
   }, [logs]);
 
+  const visibleActivityLogs = useMemo(() => {
+    const groupedLogs: any[] = [];
+    const openSessions = new Map<string, any>(); // tip -> current active app session
+
+    // Filter out admin logs and sort chronologically to process sequences
+    const sortedLogs = [...logs].filter(log => log.tip !== 'PG005085').sort((a, b) => {
+      const da = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+      const db = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
+      return da.getTime() - db.getTime();
+    });
+
+    sortedLogs.forEach(log => {
+      const logDate = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
+
+      // Identify if this is an app-usage related action
+      const appName = log.app || (log.action === 'Obertura App' ? log.app : null) || (log.action === 'DESCÀRREGA / ÈXIT' ? (log.app || 'App') : null) || (log.action === 'Cost de servei' ? log.app : null);
+
+      if (appName) {
+        let session = openSessions.get(log.tip);
+
+        // Check if existing session for this agent is for the same app and recent (within 3 hours)
+        if (session) {
+          const sessionDate = session.timestamp?.toDate ? session.timestamp.toDate() : new Date(session.timestamp);
+          if (session.app !== appName || (logDate.getTime() - sessionDate.getTime() > 3 * 60 * 60 * 1000)) {
+            openSessions.delete(log.tip);
+            session = null;
+          }
+        }
+
+        if (!session) {
+          // Create new grouped usage entry
+          session = {
+            ...log,
+            app: appName,
+            type: 'session',
+            action: 'ÚS DE L\'APP',
+            totalCost: 0,
+            success: false,
+            details: [],
+            count: 0,
+            children: []
+          };
+          groupedLogs.push(session);
+          openSessions.set(log.tip, session);
+        }
+
+        // Update grouped session data
+        session.count++;
+        if (log.action === 'Cost de servei' && log.cost) {
+          session.totalCost += parseFloat(log.cost);
+        }
+        if (log.action === 'DESCÀRREGA / ÈXIT') {
+          session.success = true;
+          const detail = log.filename || log.file || 'Informe Generat';
+          if (!session.details.includes(detail)) {
+            session.details.push(detail);
+          }
+        }
+        if (log.action === 'Tornar a Pàgina Principal') {
+          session.endTime = log.timestamp;
+          openSessions.delete(log.tip);
+        }
+        session.children.push(log);
+      } else {
+        // Non-app action (Login, PIN reset, etc.)
+        // Optional deduplication for very recent identical actions by same agent
+        const lastLog = groupedLogs[groupedLogs.length - 1];
+        const lastLogDate = lastLog?.timestamp?.toDate ? lastLog.timestamp.toDate() : (lastLog?.timestamp ? new Date(lastLog.timestamp) : null);
+        const isDuplicate = lastLog && lastLog.type === 'item' && lastLog.tip === log.tip && lastLog.action === log.action &&
+          (lastLogDate && (logDate.getTime() - lastLogDate.getTime() < 30000));
+
+        if (!isDuplicate) {
+          groupedLogs.push({ ...log, type: 'item' });
+        }
+      }
+    });
+
+    // Return in reverse order (most recent first)
+    return groupedLogs.reverse();
+  }, [logs]);
+
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-6 h-full">
       <div className="flex gap-4 p-2 bg-white/5 rounded-2xl border border-white/10 w-fit flex-wrap">
@@ -613,13 +792,38 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {activeTab === 'activity' ? (
-            logs.filter(log => log.tip !== 'PG005085').map((log, i) => (
-              <div key={i} className="flex justify-between p-4 bg-black/20 border border-white/5 rounded-2xl">
+            visibleActivityLogs.map((log, i) => (
+              <div key={i} className={`flex justify-between p-4 bg-black/20 border rounded-2xl transition-all ${log.success ? 'border-emerald-500/30' : 'border-white/5'}`}>
                 <div className="flex items-center gap-4">
                   <AgentBadge tip={log.tip} className="scale-125 mx-2" />
-                  <div><p className="text-[10px] font-black text-white uppercase">{log.name}</p><p className="text-[8px] font-bold text-amber-500 uppercase">{log.action} {log.app && `• ${log.app}`} {log.target && `→ ${log.target}`}</p></div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] font-black text-white uppercase">{log.name}</p>
+                      {log.success && <span className="text-[8px] bg-emerald-500 text-black px-1.5 py-0.5 rounded font-black flex items-center gap-1 shadow-lg shadow-emerald-500/20"><Check className="w-2 h-2" /> ÈXIT / ACABAT</span>}
+                    </div>
+                    <p className="text-[8px] font-bold text-amber-500 uppercase mt-1">
+                      {log.type === 'session' ? (
+                        <span className="flex items-center gap-2">
+                          <Activity className="w-3 h-3" /> ÚS DE: <span className="text-white bg-white/10 px-2 rounded">{log.app}</span> {log.count > 1 && `(x${log.count} ops)`}
+                        </span>
+                      ) : (
+                        log.action
+                      )}
+                      {log.totalCost > 0 && <span className="ml-2 text-emerald-500 bg-emerald-500/10 px-2 rounded">[{log.totalCost.toFixed(4)} €]</span>}
+                    </p>
+                    {log.details && log.details.length > 0 && (
+                      <p className="text-[7px] font-mono text-slate-400 mt-1 uppercase flex gap-2">
+                        {log.details.map((d: any, idx: number) => <span key={idx} className="bg-black/40 px-1 border border-white/5 rounded">↳ {d}</span>)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right text-[9px] font-mono text-slate-500">{log.timestamp?.toDate().toLocaleString()}</div>
+                <div className="text-right">
+                  <p className="text-[9px] font-mono text-slate-500">{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date(log.timestamp).toLocaleString()}</p>
+                  {log.endTime && (
+                    <p className="text-[7px] font-mono text-slate-600 mt-1 uppercase">Sessió Finalitzada</p>
+                  )}
+                </div>
               </div>
             ))
           ) : activeTab === 'costos' ? (
@@ -659,11 +863,22 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
                     <div className="w-10 h-10 rounded-full bg-amber-500 text-black flex items-center justify-center font-black text-[12px]">{i + 1}</div>
                     <div><p className="text-[10px] font-black text-white uppercase">{rank.name}</p><AgentBadge tip={rank.tip} /></div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className="text-xl font-black text-amber-500">{rank.count}</span>
-                    <span className="text-[8px] font-black uppercase text-slate-500">OPERACIONS</span>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex gap-4 items-center">
+                      <div className="flex flex-wrap gap-1.5 justify-end max-w-[200px] sm:max-w-md">
+                        {Object.entries(rank.appCounts).map(([app, c]) => (
+                          <span key={app} className="text-[7px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-slate-400 font-bold uppercase whitespace-nowrap">
+                            {app}: <span className="text-amber-500">{c}</span>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="text-right min-w-[60px]">
+                        <span className="text-xl font-black text-amber-500 leading-none block">{rank.count}</span>
+                        <span className="text-[7px] font-black uppercase text-slate-500">TOTAL OPS</span>
+                      </div>
+                    </div>
                     {rank.totalCost > 0 && (
-                      <span className="text-[10px] font-black text-emerald-500 mt-1">{rank.totalCost.toFixed(3)} €</span>
+                      <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">{rank.totalCost.toFixed(3)} €</span>
                     )}
                   </div>
                 </div>
@@ -725,6 +940,8 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
 
 function AppCard({ link, index, onClick }: { link: AppLink, index: number, onClick: () => void }) {
   const Icon = link.icon;
+  const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'gestor-casos' || link.id === 'minutes';
+
   return (
     <motion.button
       onClick={() => link.status !== 'maintenance' && onClick()}
@@ -732,7 +949,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`group relative bg-[#1e293b]/40 backdrop-blur-sm rounded-3xl p-6 lg:p-8 border border-white/10 flex flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[280px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue/50 hover:bg-[#1e293b]/60 transition-all duration-500 shadow-xl'}`}
+      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-6 lg:p-8 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[280px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
     >
       {link.status === 'maintenance' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
