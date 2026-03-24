@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 import { useState, FormEvent, useEffect, useMemo } from 'react';
 import { APP_LINKS, AppLink } from './constants';
-import { db } from './firebase';
-import { doc, getDoc, updateDoc, setDoc, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { db, dictatDb } from './firebase';
+import { doc, getDoc, updateDoc, setDoc, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, where } from 'firebase/firestore';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,7 +39,10 @@ export default function App() {
   const [activeApp, setActiveApp] = useState<AppLink | null>(null);
   const [showAdmin, setShowAdmin] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
+  const [costLogs, setCostLogs] = useState<any[]>([]);
+  const [rankLogs, setRankLogs] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [dictatLogs, setDictatLogs] = useState<any[]>([]);
 
   // Real-time validation states
   const [isTipValidated, setIsTipValidated] = useState(false);
@@ -122,9 +125,27 @@ export default function App() {
         setUsersList(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
 
+      const q3 = query(collection(dictatDb, 'dictat_accidents_t06'), orderBy('timestamp', 'desc'), limit(100));
+      const unsubscribe3 = onSnapshot(q3, (snapshot) => {
+        setDictatLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
+      const q4 = query(collection(db, 'logs'), where('action', '==', 'Cost de servei'));
+      const unsubscribe4 = onSnapshot(q4, (snapshot) => {
+        setCostLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
+      const q5 = query(collection(db, 'logs'), where('action', '==', 'Obertura App'));
+      const unsubscribe5 = onSnapshot(q5, (snapshot) => {
+        setRankLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
       return () => {
         unsubscribe1();
         unsubscribe2();
+        unsubscribe3();
+        unsubscribe4();
+        unsubscribe5();
       };
     }
   }, [currentUser, showAdmin]);
@@ -345,8 +366,8 @@ export default function App() {
             )}
             {currentUser && (
               <>
-                <div className="hidden sm:flex items-center bg-black/30 border border-white/10 rounded-lg px-2 py-1 mr-4 ml-4">
-                  <AgentBadge tip={currentUser.tip} className="scale-[2] origin-right flex-shrink-0" />
+                <div className="hidden sm:flex items-center bg-black/30 border border-white/10 rounded-lg px-2 py-1 mr-4 ml-8">
+                  <AgentBadge tip={currentUser.tip} className="text-[14px] px-3 py-1 flex-shrink-0" />
                 </div>
                 <div className="w-px h-4 bg-white/10 mx-1 hidden sm:block" />
               </>
@@ -476,7 +497,7 @@ export default function App() {
           <ContactButton />
 
           <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-1 opacity-30">
-            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-2"><AgentBadge tip="5085" /> • Versió 2.44</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • Versió 2.44</p>
             <p className="text-[7px] font-medium uppercase tracking-widest text-slate-500">SISTEMA FACILITADOR TRÀNSIT • AES-256</p>
           </div>
         </div>
@@ -518,12 +539,12 @@ export default function App() {
               <span className="block text-4xl font-mono font-black text-white tracking-tighter tabular-nums leading-none">
                 {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
-              <span className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1 mb-2">
+              <span className="block text-[14px] font-black text-slate-400 uppercase tracking-widest mt-2 mb-3">
                 {currentTime.toLocaleDateString('ca-ES', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
               </span>
-              <span className="text-[12px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-end gap-3">
+              <span className="text-[14px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-end gap-3">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <AgentBadge tip={currentUser?.tip || ''} className="scale-[3] origin-right ml-2 mr-4" /> • {currentUser?.name}
+                <AgentBadge tip={currentUser?.tip || ''} className="text-[20px] px-4 py-1.5 ml-2 mr-4" /> • {currentUser?.name}
               </span>
             </div>
             <button onClick={() => { logActivity('Tancament de sessió'); setIsAuthenticated(false); setCurrentUser(null); setShowAdmin(false); setPin(''); setConfirmPin(''); }} className="p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-mossos-red hover:text-white transition-all"><LogOut className="w-6 h-6" /></button>
@@ -534,7 +555,7 @@ export default function App() {
       <main className="flex-1 p-10 overflow-y-auto">
         <div className="max-w-7xl mx-auto h-full">
           {showAdmin && currentUser?.isAdmin ? (
-            <AdminDashboard logs={logs} users={usersList} onResetPin={handleAdminPinReset} onToggleStatus={handleToggleUserStatus} onCreateUser={handleCreateUser} onUpdateName={handleUpdateUserName} />
+            <AdminDashboard logs={logs} costLogs={costLogs} rankLogs={rankLogs} users={usersList} dictatLogs={dictatLogs} onResetPin={handleAdminPinReset} onToggleStatus={handleToggleUserStatus} onCreateUser={handleCreateUser} onUpdateName={handleUpdateUserName} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
               {APP_LINKS.map((link, index) => (
@@ -546,7 +567,7 @@ export default function App() {
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 text-center flex justify-between items-center px-10">
         <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.44 • AES-256 ENCRYPTION ACTIVE</p>
-        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-2"><AgentBadge tip="5085" /> • VERSIÓ 2.44</p>
+        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.44</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per 5085) */}
@@ -598,8 +619,8 @@ export default function App() {
   );
 }
 
-function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser, onUpdateName }: { logs: any[], users: any[], onResetPin: (tip: string) => void, onToggleStatus: (tip: string, current: string) => void, onCreateUser: (tip: string, name: string) => void, onUpdateName: (tip: string, name: string) => void }) {
-  const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos'>('activity');
+function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, onResetPin, onToggleStatus, onCreateUser, onUpdateName }: { logs: any[], costLogs: any[], rankLogs: any[], users: any[], dictatLogs: any[], onResetPin: (tip: string) => void, onToggleStatus: (tip: string, current: string) => void, onCreateUser: (tip: string, name: string) => void, onUpdateName: (tip: string, name: string) => void }) {
+  const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos' | 'dictat'>('activity');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingTip, setEditingTip] = useState<string | null>(null);
@@ -610,64 +631,78 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
 
   const usageRanking = useMemo(() => {
     const counts: Record<string, { name: string, count: number, tip: string, totalCost: number, appCounts: Record<string, number> }> = {};
-    logs.forEach(log => {
+    
+    // Combine logs that matter for ranking (costs and app opens)
+    const combinedLogs = [...costLogs, ...rankLogs];
+    
+    combinedLogs.forEach(log => {
       if (!log.tip || log.tip === 'PG005085') return;
       if (!counts[log.tip]) {
         counts[log.tip] = { name: log.name, tip: log.tip, count: 0, totalCost: 0, appCounts: {} };
       }
-      counts[log.tip].count++;
+      
+      // We only count "Obertura App" towards the count to avoid double counting with Cost de servei
+      if (log.action === 'Obertura App') {
+        counts[log.tip].count++;
+        const appName = log.app;
+        if (appName) {
+          counts[log.tip].appCounts[appName] = (counts[log.tip].appCounts[appName] || 0) + 1;
+        }
+      }
+      
       if (log.cost) {
         counts[log.tip].totalCost += parseFloat(log.cost);
       }
-
-      const appName = log.app || (log.action === 'Obertura App' ? log.app : null);
-      if (appName) {
-        counts[log.tip].appCounts[appName] = (counts[log.tip].appCounts[appName] || 0) + 1;
-      }
     });
     return Object.values(counts).sort((a, b) => b.count - a.count);
-  }, [logs]);
+  }, [costLogs, rankLogs]);
 
-  const monthlyCosts = useMemo(() => {
-    const months: Record<string, { total: number, agents: Record<string, { name: string, cost: number, count: number }> }> = {};
+  const costsByYear = useMemo(() => {
+    const years: Record<string, { total: number, count: number, months: Record<string, { total: number, agents: Record<string, { name: string, cost: number, count: number }> }> }> = {};
 
-    logs.forEach(log => {
+    costLogs.forEach(log => {
       if (!log.cost || !log.timestamp) return;
       const date = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
-      // Format: YYYY-MM
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const yearKey = date.getFullYear().toString();
+      const monthKey = `${yearKey}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-      if (!months[monthKey]) {
-        months[monthKey] = { total: 0, agents: {} };
-      }
+      if (!years[yearKey]) years[yearKey] = { total: 0, count: 0, months: {} };
+      if (!years[yearKey].months[monthKey]) years[yearKey].months[monthKey] = { total: 0, agents: {} };
 
       const costParsed = parseFloat(log.cost);
-      months[monthKey].total += costParsed;
+      years[yearKey].total += costParsed;
+      years[yearKey].count++;
+      years[yearKey].months[monthKey].total += costParsed;
 
-      if (!months[monthKey].agents[log.tip]) {
-        months[monthKey].agents[log.tip] = { name: log.name || log.tip, cost: 0, count: 0 };
+      if (!years[yearKey].months[monthKey].agents[log.tip]) {
+        years[yearKey].months[monthKey].agents[log.tip] = { name: log.name || log.tip, cost: 0, count: 0 };
       }
-
-      months[monthKey].agents[log.tip].cost += costParsed;
-      months[monthKey].agents[log.tip].count++;
+      years[yearKey].months[monthKey].agents[log.tip].cost += costParsed;
+      years[yearKey].months[monthKey].agents[log.tip].count++;
     });
 
-    // Convert to sorted array
-    return Object.keys(months).sort((a, b) => b.localeCompare(a)).map(monthKey => {
-      const [year, month] = monthKey.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
-      const monthName = date.toLocaleDateString('ca-ES', { month: 'long', year: 'numeric' }).toUpperCase();
+    return Object.keys(years).sort((a, b) => b.localeCompare(a)).map(yearKey => {
+      const sortedMonths = Object.keys(years[yearKey].months).sort((a, b) => b.localeCompare(a)).map(monthKey => {
+        const [y, m] = monthKey.split('-');
+        const date = new Date(parseInt(y), parseInt(m) - 1, 1);
+        return {
+          key: monthKey,
+          name: date.toLocaleDateString('ca-ES', { month: 'long', year: 'numeric' }).toUpperCase(),
+          total: years[yearKey].months[monthKey].total,
+          agents: Object.entries(years[yearKey].months[monthKey].agents)
+            .map(([tip, data]) => ({ tip, ...data }))
+            .sort((a, b) => b.cost - a.cost)
+        };
+      });
 
       return {
-        key: monthKey,
-        name: monthName,
-        total: months[monthKey].total,
-        agents: Object.entries(months[monthKey].agents)
-          .map(([tip, data]) => ({ tip, ...data }))
-          .sort((a, b) => b.cost - a.cost)
+        year: yearKey,
+        total: years[yearKey].total,
+        count: years[yearKey].count,
+        months: sortedMonths
       };
     });
-  }, [logs]);
+  }, [costLogs]);
 
   const visibleActivityLogs = useMemo(() => {
     const groupedLogs: any[] = [];
@@ -757,6 +792,7 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
         <button onClick={() => setActiveTab('users')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'}`}>Gestió Agents</button>
         <button onClick={() => setActiveTab('ranking')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'ranking' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'}`}>Rànquing d'Ús</button>
         <button onClick={() => setActiveTab('costos')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'costos' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}>Despesa Mensual</button>
+        <button onClick={() => setActiveTab('dictat')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'dictat' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>Informes Dictat</button>
       </div>
 
       {activeTab === 'users' && isAdding && (
@@ -778,7 +814,7 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
 
       <div className="flex-1 bg-white/5 border border-white/10 rounded-3xl overflow-hidden flex flex-col">
         <div className="p-6 border-b border-white/10 bg-black/20 flex justify-between items-center">
-          <div className="flex items-center gap-3"><Activity className={`w-5 h-5 ${activeTab === 'costos' ? 'text-emerald-500' : 'text-amber-500'}`} /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{activeTab === 'activity' ? 'Registre d\'Operacions' : activeTab === 'users' ? 'Base de dades d\'Agents' : activeTab === 'costos' ? 'Informe de Costos mensuals' : 'Estadístic de Rànquing'}</span></div>
+          <div className="flex items-center gap-3"><Activity className={`w-5 h-5 ${activeTab === 'costos' ? 'text-emerald-500' : activeTab === 'dictat' ? 'text-blue-500' : 'text-amber-500'}`} /><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{activeTab === 'activity' ? 'Registre d\'Operacions' : activeTab === 'users' ? 'Base de dades d\'Agents' : activeTab === 'costos' ? 'Informe de Costos mensuals' : activeTab === 'dictat' ? 'Informes Eina Dictat' : 'Estadístic de Rànquing'}</span></div>
           <div className="flex items-center gap-4">
             {activeTab === 'users' && (
               <>
@@ -827,33 +863,50 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
               </div>
             ))
           ) : activeTab === 'costos' ? (
-            <div className="space-y-6">
-              {monthlyCosts.map((month) => (
-                <div key={month.key} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden p-6 space-y-4">
-                  <div className="flex justify-between items-end border-b border-white/10 pb-4">
-                    <h3 className="text-xl font-black text-amber-500">{month.name}</h3>
-                    <div className="text-right">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Despesa Mensual</p>
-                      <p className="text-2xl font-black text-emerald-500">{month.total.toFixed(4)} €</p>
-                    </div>
+            <div className="space-y-8">
+              {costsByYear.map((yearGroup) => (
+                <div key={yearGroup.year} className="bg-black/30 border border-emerald-500/20 rounded-[2.5rem] p-8 space-y-6 shadow-2xl overflow-hidden">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-end border-b border-white/10 pb-6 gap-4">
+                     <div>
+                       <h2 className="text-3xl font-black text-white">ANY GLOBAL {yearGroup.year}</h2>
+                       <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">{yearGroup.count} moviments processats</p>
+                     </div>
+                     <div className="md:text-right bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl">
+                       <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/80 mb-1">Despesa Acumulada Anual</p>
+                       <p className="text-4xl font-black text-emerald-400 leading-none">{yearGroup.total.toFixed(6)} €</p>
+                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {month.agents.map((agent) => (
-                      <div key={agent.tip} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex justify-between items-center">
-                        <div>
-                          <p className="text-[10px] font-black text-white uppercase">{agent.name}</p>
-                          <AgentBadge tip={agent.tip} />
+
+                  <div className="space-y-6">
+                    {yearGroup.months.map((month) => (
+                      <div key={month.key} className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden p-6 space-y-4">
+                        <div className="flex justify-between items-end border-b border-white/10 pb-4">
+                          <h3 className="text-xl font-black text-amber-500">{month.name}</h3>
+                          <div className="text-right">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Despesa Mensual</p>
+                            <p className="text-2xl font-black text-emerald-500">{month.total.toFixed(6)} €</p>
+                          </div>
                         </div>
-                        <div className="text-right flex flex-col items-end">
-                          <p className="text-sm font-black text-emerald-500">{agent.cost.toFixed(4)} €</p>
-                          <p className="text-[8px] font-bold text-slate-500">{agent.count} operacions</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {month.agents.map((agent) => (
+                            <div key={agent.tip} className="bg-black/40 border border-white/5 rounded-2xl p-4 flex justify-between items-center group transition-all hover:bg-black/60">
+                              <div>
+                                <p className="text-[10px] font-black text-white uppercase truncate max-w-[120px]">{agent.name}</p>
+                                <AgentBadge tip={agent.tip} />
+                              </div>
+                              <div className="text-right flex flex-col items-end">
+                                <p className="text-sm font-black text-emerald-500 group-hover:text-emerald-400 transition-colors">{agent.cost.toFixed(6)} €</p>
+                                <p className="text-[8px] font-bold text-slate-500">{agent.count} ops</p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               ))}
-              {monthlyCosts.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha costos registrats per mostrar</p>}
+              {costsByYear.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha costos registrats per mostrar</p>}
             </div>
           ) : activeTab === 'ranking' ? (
             <div className="space-y-2">
@@ -884,6 +937,32 @@ function AdminDashboard({ logs, users, onResetPin, onToggleStatus, onCreateUser,
                 </div>
               ))}
               {usageRanking.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha prou dades per generar el rànquing</p>}
+            </div>
+          ) : activeTab === 'dictat' ? (
+            <div className="space-y-4">
+              {dictatLogs.map((log) => (
+                <div key={log.id} className="p-5 bg-black/20 border border-white/5 rounded-2xl flex flex-col gap-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <AgentBadge tip={log.agentTip || '???'} />
+                      <span className="text-[16px] font-black text-amber-500">{log.nat || 'SENSE NAT'}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest ${log.mode === 'TECNIC' ? 'bg-purple-500 text-white' : log.mode === 'SIMPLE' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'}`}>{log.mode}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-mono font-black">{log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Sense data'}</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                    <div className="bg-white/5 border border-white/5 p-5 rounded-2xl flex flex-col h-full">
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-3">Relat Capturat de l'Agent</p>
+                      <p className="text-sm text-slate-300 font-medium whitespace-pre-wrap leading-relaxed flex-1">{log.input}</p>
+                    </div>
+                    <div className="bg-blue-500/10 border border-blue-500/20 p-5 rounded-2xl flex flex-col h-full">
+                      <p className="text-[10px] text-blue-400 uppercase tracking-widest font-black mb-3">Informe Generat</p>
+                      <p className="text-sm text-blue-100 font-medium whitespace-pre-wrap leading-relaxed flex-1">{log.report}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {dictatLogs.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha informes recents</p>}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -962,7 +1041,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
         <div className={`w-14 h-14 lg:w-18 lg:h-18 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-7 h-7 lg:w-9 lg:h-9" /></div>
         <span className="text-[8px] lg:text-xs font-mono text-slate-600">{link.code}</span>
       </div>
-      <div className={`mt-6 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}><h3 className="text-xl lg:text-2xl font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-2 lg:mb-3">{link.title}</h3><p className="text-slate-400 text-xs lg:text-sm font-medium lg:leading-relaxed line-clamp-3">{link.description}</p></div>
+      <div className={`mt-6 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}><h3 className="text-xl lg:text-2xl font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-2 lg:mb-3 whitespace-pre-line">{link.title}</h3><p className="text-slate-400 text-xs lg:text-sm font-medium lg:leading-relaxed line-clamp-3">{link.description}</p></div>
       <div className={`flex items-center justify-between pt-6 border-t border-white/5 mt-6 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
         <div className="flex items-center gap-2">
           <div className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${link.category === 'dictat' ? 'bg-blue-500' : link.category === 'imatges' ? 'bg-emerald-500' : 'bg-purple-500'}`} />
@@ -1016,8 +1095,11 @@ function ContactButton() {
 }
 function AgentBadge({ tip, className = "" }: { tip: string, className?: string }) {
   const displayTip = tip.startsWith('PG') ? tip.slice(2).replace(/^0+/, '') : tip;
+  const hasTextSize = className.includes('text-');
+  const baseClasses = hasTextSize ? '' : 'text-[10px] px-2 py-0.5';
+  
   return (
-    <span className={`inline-flex items-center justify-center bg-black border border-amber-500 text-amber-500 font-black px-2 py-0.5 rounded-md text-[10px] leading-none shadow-sm ${className}`} style={{ minWidth: '3.5rem' }}>
+    <span className={`inline-flex items-center justify-center bg-black border border-amber-500 text-amber-500 font-black rounded-md leading-none shadow-sm ${baseClasses} ${className}`} style={{ minWidth: '3.5rem' }}>
       {displayTip}
     </span>
   );

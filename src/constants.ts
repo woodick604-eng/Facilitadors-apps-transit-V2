@@ -1,11 +1,10 @@
 import {
-  Mic,
-  Image,
-  NotebookPen,
-  ClipboardList,
-  Zap,
+  MicVocal,
+  Images,
+  Camera,
+  FileImage,
   FolderSearch,
-  ExternalLink
+  FileAudio
 } from 'lucide-react';
 
 export const MOSSOS_THEME = {
@@ -33,7 +32,7 @@ export const APP_LINKS: AppLink[] = [
     title: '1. Dictat d\'Accidents de Trànsit',
     description: 'Eina de dictat per veu per a la redacció ràpida d\'informes d\'accidents.',
     url: 'https://dictat-atenea-t06.web.app/',
-    icon: Mic,
+    icon: MicVocal,
     category: 'dictat',
     status: 'online',
     code: 'DAT-01'
@@ -43,7 +42,7 @@ export const APP_LINKS: AppLink[] = [
     title: '2. Reanomenador de Fotografies (Manual) (PER ATENEA)',
     description: 'Eina per reduir, reanomenar manualment i organitzar fotografies de camp.',
     url: 'https://processador-imatges-accidents.web.app/',
-    icon: Image,
+    icon: Images,
     category: 'imatges',
     status: 'online',
     code: 'RF-02'
@@ -53,7 +52,7 @@ export const APP_LINKS: AppLink[] = [
     title: '3. Reanomenador de Fotografies (Auto) (PER ATENEA)',
     description: 'Plataforma per reduir i reanomenar fotos de forma totalment automàtica.',
     url: 'https://atenea-fotos.web.app/',
-    icon: Image,
+    icon: Camera,
     category: 'imatges',
     status: 'online',
     code: 'RFA-03'
@@ -63,17 +62,17 @@ export const APP_LINKS: AppLink[] = [
     title: '4. Informe Fotogràfic Automàtic (PER JUTJATS o D\'ALTRES)',
     description: 'Generador automàtic d\'informes fotogràfics tècnics. (Triga una mica a obrir-se)',
     url: 'https://infofoto-vector-art.web.app/',
-    icon: NotebookPen,
+    icon: FileImage,
     category: 'imatges',
     status: 'online',
     code: 'IFA-04'
   },
   {
     id: 'gestor-casos',
-    title: '5. Simptomatologia DGT',
+    title: '5. Simptomatologia\n(SIGNES EXTERNS) DGT',
     description: 'Simptomatologia compatible segons DGT. Permet dictar o escriure les observacions i el sistema integra tota la informació automàticament.',
     url: 'https://simptomatologia.web.app/',
-    icon: ClipboardList,
+    icon: FolderSearch,
     category: 'gestio',
     status: 'online',
     code: 'GC-05'
@@ -83,7 +82,7 @@ export const APP_LINKS: AppLink[] = [
     title: '6. Dictar Minutes / Diligència d\'Informe T-32',
     description: 'Eina de gestió i dictat, a format policial cronològic i oficial.',
     url: 'https://dictat-minutes.web.app/',
-    icon: Mic,
+    icon: FileAudio,
     category: 'gestio',
     status: 'online',
     code: 'MIN-06'

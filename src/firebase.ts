@@ -12,3 +12,16 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+// Secondary app for Dictat Atenea access in Admin
+const dictatConfig = {
+    apiKey: "AIzaSyCReCN-ps4NwGuWycb6euaqpQqSjgMwoio",
+    authDomain: "dictat-atenea-t06.firebaseapp.com",
+    projectId: "dictat-atenea-t06",
+    storageBucket: "dictat-atenea-t06.firebasestorage.app",
+    messagingSenderId: "315810657079",
+    appId: "1:315810657079:web:272e462e805009296da0b2"
+};
+
+const dictatAppInit = initializeApp(dictatConfig, 'dictat');
+export const dictatDb = getFirestore(dictatAppInit);
