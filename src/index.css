@@ -29,3 +29,21 @@ body {
 .animate-pulse-fast {
   animation: pulse-fast 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+@keyframes police-strobe {
+  0%    { opacity: 0.05; box-shadow: none; transform: scale(1); }
+  5%    { opacity: 1;    box-shadow: 0 0 18px 7px rgba(59,130,246,0.9), 0 0 35px 14px rgba(59,130,246,0.5); transform: scale(1.3); }
+  10%   { opacity: 0.05; box-shadow: none; transform: scale(1); }
+  15%   { opacity: 1;    box-shadow: 0 0 18px 7px rgba(59,130,246,0.9), 0 0 35px 14px rgba(59,130,246,0.5); transform: scale(1.3); }
+  20%   { opacity: 0.05; box-shadow: none; transform: scale(1); }
+  25%   { opacity: 1;    box-shadow: 0 0 18px 7px rgba(59,130,246,0.9), 0 0 35px 14px rgba(59,130,246,0.5); transform: scale(1.3); }
+  30%, 100% { opacity: 0.05; box-shadow: none; transform: scale(1); }
+}
+
+.animate-police-strobe {
+  animation: police-strobe 3s 3 forwards;
+}
+.animate-police-strobe-delayed {
+  animation: police-strobe 3s 3 forwards 0.4s;
+  opacity: 0.05;
+}

@@ -30,7 +30,7 @@ import { doc, getDoc, updateDoc, setDoc, collection, addDoc, query, orderBy, lim
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [tipInput, setTipInput] = useState(() => localStorage.getItem('agentTIP') || '');
+  const [tipInput, setTipInput] = useState('');
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [currentUser, setCurrentUser] = useState<{ tip: string, name: string, isAdmin?: boolean } | null>(null);
@@ -53,6 +53,26 @@ export default function App() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Auto-omplir TIP des de localStorage despres de veure l'animacio de la moto
+  useEffect(() => {
+    const saved = localStorage.getItem('agentTIP');
+    if (saved) {
+      const t = setTimeout(() => setTipInput(saved), 1800);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  // Scroll al camp PIN quan el TIP es valida (util al mobil)
+  useEffect(() => {
+    if (isTipValidated) {
+      const t = setTimeout(() => {
+        const pinInput = document.querySelector<HTMLElement>('input[type="password"]');
+        if (pinInput) pinInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 450);
+      return () => clearTimeout(t);
+    }
+  }, [isTipValidated]);
 
   // Real-time TIP validation logic
   useEffect(() => {
@@ -127,7 +147,22 @@ export default function App() {
 
       const q3 = query(collection(dictatDb, 'dictat_accidents_t06'), orderBy('timestamp', 'desc'), limit(100));
       const unsubscribe3 = onSnapshot(q3, (snapshot) => {
-        setDictatLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const uniqueDictat: any[] = [];
+        const seenNats = new Set<string>();
+        
+        snapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          const logNat = data.nat || 'SENSE NAT';
+          
+          if (logNat === 'SENSE NAT' || !seenNats.has(logNat)) {
+            if (logNat !== 'SENSE NAT') {
+              seenNats.add(logNat);
+            }
+            uniqueDictat.push({ id: doc.id, ...data });
+          }
+        });
+        
+        setDictatLogs(uniqueDictat);
       });
 
       const q4 = query(collection(db, 'logs'), where('action', '==', 'Cost de servei'));
@@ -419,24 +454,38 @@ export default function App() {
           )}
 
           <div className="text-center mb-6 lg:mb-8">
-            <div className={`inline-flex items-center justify-center w-60 h-80 lg:w-[312px] lg:h-[416px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast`}>
+            <div className={`inline-flex items-center justify-center w-60 h-80 lg:w-[312px] lg:h-[416px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast relative`}>
               <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
+              {/* Pilot blau Davanter (dreta, al costat de la roda far davanter) */}
+              <div className="absolute w-[2.5%] h-[1.8%] bg-blue-400 rounded-full animate-police-strobe mix-blend-screen" style={{ top: '38.5%', right: '29.5%' }} />
+              {/* Pilot blau Posterior (esquerra, seient posterior) */}
+              <div className="absolute w-[2.5%] h-[1.8%] bg-blue-400 rounded-full animate-police-strobe-delayed mix-blend-screen" style={{ top: '36.5%', left: '38.5%' }} />
             </div>
-            <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tight">ACCÈS APPS FACILITADORES TRÀNSIT</h1>
-            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">Personal Autoritzat • UNITAT DE TRÀNSIT</p>
+            <h1 className="text-2xl lg:text-3xl font-black uppercase tracking-tight">
+              ACCÈS APPS FACILITADORES TRÀNSIT
+            </h1>
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2 mb-3">Personal Autoritzat • UNITAT DE TRÀNSIT</p>
+            <div className="flex items-center justify-center gap-2 opacity-50">
+              <AgentBadge tip="@5085" className="text-[10px] px-1.5 py-0.5" /> 
+              <span className="text-slate-400 text-[8px] tracking-widest font-black uppercase">• Versió 2.44</span>
+            </div>
           </div>
 
           <form onSubmit={handleAuth} className="space-y-6">
-            <div>
-              <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">Número TIP</label>
-              <div className="relative">
+            <div className={`transition-all ${tipInput.length > 0 ? 'flex flex-col items-center' : ''}`}>
+              <label className={`block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 ${tipInput.length > 0 ? 'text-center pl-0' : 'pl-1'}`}>Número TIP</label>
+              <div className={`relative flex items-center transition-all ${tipInput.length > 0 ? 'justify-center w-fit' : 'w-full'}`}>
                 <input
                   type="text" placeholder="Ex: 2941"
-                  className={`w-full bg-white/5 border rounded-2xl py-4 px-6 text-xl text-white outline-none transition-all ${isTipValidated ? 'border-emerald-500 bg-emerald-500/5' : 'border-white/10 focus:border-mossos-blue'}`}
-                  value={tipInput} onChange={(e) => setTipInput(e.target.value)} maxLength={8}
-                  autoFocus
+                  className={`border py-3 outline-none transition-all ${
+                    tipInput.length > 0
+                      ? 'w-[140px] px-2 text-center text-2xl tracking-[0.2em] font-mono font-black rounded-xl border-amber-500 bg-[#0a0f1a] text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.15)]'
+                      : 'w-full pl-6 pr-6 py-4 text-xl rounded-2xl bg-white/5 border-white/10 focus:border-mossos-blue text-white'
+                  }`}
+                  value={tipInput} onChange={(e) => setTipInput(e.target.value.replace(/\D/g, ''))} maxLength={5}
+                  autoFocus={!isTipValidated}
                 />
-                {isTipValidated && <ShieldCheck className="absolute right-5 top-1/2 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
+                {isTipValidated && <ShieldCheck className="absolute -right-8 top-1/2 -translate-y-1/2 w-6 h-6 text-emerald-500" />}
               </div>
             </div>
 
@@ -470,7 +519,7 @@ export default function App() {
                       <label className="block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 pl-1">Entra el teu PIN personal</label>
                       <div className="relative">
                         <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                        <input type="password" maxLength={4} placeholder="••••" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-2xl tracking-[1em] text-center text-white outline-none focus:ring-2 focus:ring-mossos-blue" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
+                        <input type="password" maxLength={4} placeholder="••••" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-4 text-2xl tracking-[1em] text-center text-white outline-none focus:ring-2 focus:ring-mossos-blue" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} autoFocus />
                       </div>
                     </div>
                   )}
@@ -497,7 +546,6 @@ export default function App() {
           <ContactButton />
 
           <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-1 opacity-30">
-            <p className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • Versió 2.44</p>
             <p className="text-[7px] font-medium uppercase tracking-widest text-slate-500">SISTEMA FACILITADOR TRÀNSIT • AES-256</p>
           </div>
         </div>
@@ -516,8 +564,9 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-3xl font-black text-white tracking-tighter uppercase">MOSSOS D'ESQUADRA</h1>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
+              <span className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.44</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -565,9 +614,8 @@ export default function App() {
           )}
         </div>
       </main>
-      <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 text-center flex justify-between items-center px-10">
+      <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 flex justify-center items-center px-10">
         <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.44 • AES-256 ENCRYPTION ACTIVE</p>
-        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.44</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per 5085) */}
@@ -1080,13 +1128,13 @@ function ContactButton() {
       <AnimatePresence>
         {shown && (
           <motion.a
-            href="mailto:woodick604@gmail.com"
+            href="mailto:aadsuarg@gmail.com"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="inline-block mt-4 px-4 py-2 bg-white/5 border border-white/10 rounded-xl text-[10px] font-mono text-slate-400 hover:text-white hover:border-white/20 transition-all"
           >
-            woodick604@gmail.com
+            aadsuarg@gmail.com
           </motion.a>
         )}
       </AnimatePresence>
