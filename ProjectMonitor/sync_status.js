@@ -54,7 +54,7 @@ async function updateAllStatus() {
         if (fs.existsSync(fullPath)) {
             data.status = 'online';
             data.branch = safeExec(`git rev-parse --abbrev-ref HEAD`, fullPath) || 'main';
-            data.lastCommit = safeExec(`git log -1 --format=%cd --date=relative`, fullPath) || 'Recent';
+            data.lastCommit = safeExec('git log -1 --format=%cr', fullPath) || 'Recent';
             const statusStr = safeExec(`git status --porcelain`, fullPath);
             data.hasUncommited = statusStr ? statusStr.length > 0 : false;
         }
@@ -96,6 +96,7 @@ function listenForCommands() {
                                     safeExec(`git add . && git commit -m "Segellat manual des de Dashboard (Tot): ${new Date().toISOString()}" || echo "Res a commitejar"`, fullPath);
                                 }
                             }
+                            await updateAllStatus(); // Forçar actualització d'estat immediata
                         } else if (cmd.type === "SEGELLAR_GIT_INDIVIDUAL" && cmd.projectId) {
                             console.log(`🛡️ Segellant projecte individual: ${cmd.projectId}`);
                             const proj = projectPaths.find(p => p.id === cmd.projectId);
@@ -105,10 +106,33 @@ function listenForCommands() {
                                     safeExec(`git add . && git commit -m "Segellat manual des de Dashboard (${cmd.projectId}): ${new Date().toISOString()}" || echo "Res a commitejar"`, fullPath);
                                 }
                             }
+                            await updateAllStatus(); // Forçar actualització d'estat immediata
+                        } else if (cmd.type === "OPEN_PROJECT" && cmd.projectId) {
+                            console.log(`📂 Obrint carpeta del projecte: ${cmd.projectId}`);
+                            const proj = projectPaths.find(p => p.id === cmd.projectId);
+                            if (proj) {
+                                const fullPath = path.join(projectsDir, proj.path);
+                                safeExec(`open "${fullPath}"`); // Obrir carpeta al Finder
+                            }
                         } else if (cmd.type === "PANIC_ROLLBACK") {
-                            console.log(`🚨 PÀNIC! Revertint a ${cmd.date}...`);
-                            // Només s'executa si l'usuari ho demana explícitament avui
-                            execSync(`node panic_revert.js ${cmd.date}`, { stdio: 'inherit' });
+                            console.log(`🚨 EXECUTANT ROLLBACK A ${cmd.date || 'S/D'} per ${cmd.projectId || 'SISTEMA'}...`);
+                            if (cmd.projectId) {
+                                // Rollback individual
+                                const proj = projectPaths.find(p => p.id === cmd.projectId);
+                                if (proj) {
+                                    const fullPath = path.join(projectsDir, proj.path);
+                                    safeExec(`git reset --hard HEAD && git clean -fd`, fullPath);
+                                }
+                            } else {
+                                // Rollback global
+                                for (const proj of projectPaths) {
+                                    const fullPath = path.join(projectsDir, proj.path);
+                                    if (fs.existsSync(fullPath)) {
+                                        safeExec(`git reset --hard HEAD && git clean -fd`, fullPath);
+                                    }
+                                }
+                            }
+                            await updateAllStatus(); // Forçar actualització d'estat d'emergència
                         }
 
                         await updateDoc(doc(db, "remote_commands", change.doc.id), { 
@@ -116,8 +140,6 @@ function listenForCommands() {
                             completedAt: serverTimestamp() 
                         });
                         console.log("✅ Ordre executada correctament.");
-                        // Sincronitzem l'estat immediatament després d'una acció
-                        await updateAllStatus(); 
                     } catch (err) {
                         console.error("❌ Error processant ordre:", err);
                         await updateDoc(doc(db, "remote_commands", change.doc.id), { 

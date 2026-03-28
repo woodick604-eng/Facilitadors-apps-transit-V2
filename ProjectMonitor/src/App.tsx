@@ -113,7 +113,13 @@ function App() {
                   </div>
                   <div className="card-buttons">
                     <button onClick={() => sendCommand('SEGELLAR_GIT_INDIVIDUAL', { projectId: p.id })} className="btn-card-action">Segellar</button>
-                    <button title="Obrir" className="btn-card-action secondary"><ExternalLink size={14} /></button>
+                    <button 
+                      title="Obrir carpeta" 
+                      className="btn-card-action secondary"
+                      onClick={() => sendCommand('OPEN_PROJECT', { projectId: p.id })}
+                    >
+                      <ExternalLink size={14} />
+                    </button>
                   </div>
                 </div>
               ))}
