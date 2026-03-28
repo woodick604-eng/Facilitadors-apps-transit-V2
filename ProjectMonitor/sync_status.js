@@ -131,17 +131,49 @@ function listenForCommands() {
     });
 }
 
+async function syncAllRecoveryPoints() {
+    console.log(`[${new Date().toLocaleTimeString()}] 🛡️ Sincronitzant punts de restauració de tots els projectes...`);
+    
+    for (const project of projectPaths) {
+        const fullPath = path.join(projectsDir, project.path);
+        if (fs.existsSync(fullPath)) {
+            const log = safeExec('git log -n 3 --pretty=format:"%h|%ad|%s" --date=format:"%d/%m/%Y %H:%M"', fullPath);
+            if (log) {
+                const commits = log.split('\n').filter(l => l.trim()).map(line => {
+                    const [hash, date, msg] = line.split('|');
+                    return { hash, date, msg, projectName: project.id };
+                });
+
+                for (const c of commits) {
+                    const id = `${project.id}_${c.hash}`;
+                    try {
+                        await setDoc(doc(db, 'recovery_points', id), {
+                            ...c,
+                            updatedAt: serverTimestamp()
+                        }, { merge: true });
+                    } catch (e) {
+                        console.error(`❌ Error pujant punt de restauració per ${project.id}:`, e.message);
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Execució principal
 async function start() {
     // 1. Primer sincronitzem tot una vegada en arrencar
     await updateAllStatus();
+    await syncAllRecoveryPoints();
     
     // 2. Iniciem l'escolta en temps real d'ordres (Això SEMPRE és instantani)
     listenForCommands();
     
     // 3. Programem actualitzacions d'estat periòdiques (Cada 10 minuts: 600000ms)
-    // Això estalvia escriptures a Firestore i només sincronitza l'estat si t'ho has oblidat obert.
     setInterval(updateAllStatus, 600000);
+    
+    // 4. Programem sincronització de punts de restauració (Cada 30 minuts)
+    setInterval(syncAllRecoveryPoints, 1800000);
 }
 
 start().catch(console.error);
