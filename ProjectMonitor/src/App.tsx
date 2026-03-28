@@ -51,6 +51,7 @@ function App() {
   const sendCommand = async (type: string, data: any = {}) => {
     const cmd = { type, status: 'pending', time: new Date().toISOString(), ...data };
     await addDoc(collection(db, 'remote_commands'), cmd);
+    alert(`Ordre ${type} enviada correctament!`);
   };
 
   const restaurarSistema = (date: string, projectName: string) => {

@@ -1,5 +1,8 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, serverTimestamp, collection, onSnapshot, updateDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { 
+    getFirestore, collection, onSnapshot, query, where, orderBy, 
+    addDoc, doc, updateDoc, setDoc, serverTimestamp, getDocs 
+} from 'firebase/firestore';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -29,7 +32,20 @@ const projectPaths = [
 
 console.log("🚀 INICIANT MONITOR D'ADMINISTRACIÓ (DAEMON)...");
 
-// Funció segura per executar Git amb timeout (evita bloquejos)
+let isUpdating = false;
+
+function cleanGitLock(repoPath) {
+    const lockPath = path.join(repoPath, '.git', 'index.lock');
+    if (fs.existsSync(lockPath)) {
+        try {
+            fs.unlinkSync(lockPath);
+            console.log(`   🛠️  Netejat index.lock residual a ${repoPath}`);
+        } catch (e) {
+            console.error(`   ❌ No s'ha pogut eliminar el lock a ${repoPath}:`, e.message);
+        }
+    }
+}
+
 function safeExec(cmd, cwd) {
     try {
         return execSync(cmd, { cwd, encoding: 'utf8', timeout: 5000 }).trim();
@@ -39,19 +55,16 @@ function safeExec(cmd, cwd) {
 }
 
 async function updateAllStatus() {
+    if (isUpdating) return;
+    isUpdating = true;
     console.log(`[${new Date().toLocaleTimeString()}] 🔄 Sincronitzant estat dels projectes...`);
     
     for (const project of projectPaths) {
+        let data = { id: project.id, status: 'offline', updatedAt: serverTimestamp() };
         const fullPath = path.join(projectsDir, project.path);
-        let data = {
-            id: project.id,
-            status: 'offline',
-            branch: 'N/A',
-            lastCommit: 'N/A',
-            hasUncommited: false
-        };
-
+        
         if (fs.existsSync(fullPath)) {
+            cleanGitLock(fullPath);
             data.status = 'online';
             data.branch = safeExec(`git rev-parse --abbrev-ref HEAD`, fullPath) || 'main';
             data.lastCommit = safeExec('git log -1 --format=%cr', fullPath) || 'Recent';
@@ -60,96 +73,83 @@ async function updateAllStatus() {
         }
 
         try {
-            await setDoc(doc(db, 'system_status', project.id), {
-                ...data,
-                updatedAt: serverTimestamp()
-            }, { merge: true });
+            await setDoc(doc(db, 'system_status', project.id), data, { merge: true });
         } catch (e) {
-            console.error(`❌ Error sincronitzant ${project.id}:`, e.message);
+            console.error(`❌ Error actualitzant Firestore per ${project.id}:`, e.message);
         }
     }
+    isUpdating = false;
 }
 
-const startTime = new Date();
-
-function listenForCommands() {
+async function listenForCommands() {
     console.log("📡 Escoltant ordres del Dashboard (remote_commands)...");
-    console.log("🛡️ MODE SEGUR: Només s'executaran ordres creades després de: " + startTime.toLocaleTimeString());
+    const startTime = Date.now();
+    console.log(`🛡️ MODE SEGUR: Només s'executaran ordres creades després de: ${new Date().toLocaleTimeString()}`);
+
+    const q = query(collection(db, "remote_commands"), where("status", "==", "pending"));
     
-    onSnapshot(collection(db, "remote_commands"), (snapshot) => {
-        snapshot.docChanges().forEach(async (change) => {
+    onSnapshot(q, async (snapshot) => {
+        for (const change of snapshot.docChanges()) {
             if (change.type === "added") {
                 const cmd = change.doc.data();
+                const cmdTime = cmd.time ? new Date(cmd.time).getTime() : 0;
                 
-                // Ignorar ordres antigues o ja processades
-                const cmdTime = cmd.time ? new Date(cmd.time) : new Date(0);
-                if (cmd.status === "pending" && cmdTime > startTime) {
-                    console.log(`⚡ ORDRE REBUDA (@${cmdTime.toLocaleTimeString()}): ${cmd.type}`);
+                if (cmdTime > startTime) {
+                    console.log(`⚡ ORDRE REBUDA (@${new Date(cmdTime).toLocaleTimeString()}): ${cmd.type}`);
                     
                     try {
                         if (cmd.type === "SEGELLAR_GIT") {
                             console.log("🛡️ Segellant tots els projectes (Git Commit)...");
+                            isUpdating = true;
                             for (const proj of projectPaths) {
                                 const fullPath = path.join(projectsDir, proj.path);
                                 if (fs.existsSync(fullPath)) {
                                     console.log(`   📦 Commitejant ${proj.id}...`);
-                                    safeExec(`git add . && git commit -m "Segellat manual des de Dashboard (Tot): ${new Date().toISOString()}" || echo "Res a commitejar"`, fullPath);
+                                    cleanGitLock(fullPath);
+                                    safeExec(`git add . && git commit -m "Segellat manual (Tot): ${new Date().toISOString()}" || echo "Res"`, fullPath);
                                 }
                             }
-                            await updateAllStatus(); // Forçar actualització d'estat immediata
+                            isUpdating = false;
+                            await updateAllStatus();
                         } else if (cmd.type === "SEGELLAR_GIT_INDIVIDUAL" && cmd.projectId) {
                             console.log(`🛡️ Segellant projecte individual: ${cmd.projectId}`);
                             const proj = projectPaths.find(p => p.id === cmd.projectId);
                             if (proj) {
                                 const fullPath = path.join(projectsDir, proj.path);
-                                if (fs.existsSync(fullPath)) {
-                                    safeExec(`git add . && git commit -m "Segellat manual des de Dashboard (${cmd.projectId}): ${new Date().toISOString()}" || echo "Res a commitejar"`, fullPath);
-                                }
+                                cleanGitLock(fullPath);
+                                safeExec(`git add . && git commit -m "Segellat individual: ${new Date().toISOString()}" || echo "Res"`, fullPath);
                             }
-                            await updateAllStatus(); // Forçar actualització d'estat immediata
+                            await updateAllStatus();
                         } else if (cmd.type === "OPEN_PROJECT" && cmd.projectId) {
                             console.log(`📂 Obrint carpeta del projecte: ${cmd.projectId}`);
                             const proj = projectPaths.find(p => p.id === cmd.projectId);
                             if (proj) {
-                                const fullPath = path.join(projectsDir, proj.path);
-                                safeExec(`open "${fullPath}"`); // Obrir carpeta al Finder
+                                safeExec(`open "${path.join(projectsDir, proj.path)}"`);
                             }
                         } else if (cmd.type === "PANIC_ROLLBACK") {
-                            console.log(`🚨 EXECUTANT ROLLBACK A ${cmd.date || 'S/D'} per ${cmd.projectId || 'SISTEMA'}...`);
-                            if (cmd.projectId) {
-                                // Rollback individual
-                                const proj = projectPaths.find(p => p.id === cmd.projectId);
+                            console.log(`🚨 EXECUTANT ROLLBACK...`);
+                            isUpdating = true;
+                            const target = cmd.projectId ? [projectPaths.find(p => p.id === cmd.projectId)] : projectPaths;
+                            for (const proj of target) {
                                 if (proj) {
                                     const fullPath = path.join(projectsDir, proj.path);
+                                    cleanGitLock(fullPath);
                                     safeExec(`git reset --hard HEAD && git clean -fd`, fullPath);
                                 }
-                            } else {
-                                // Rollback global
-                                for (const proj of projectPaths) {
-                                    const fullPath = path.join(projectsDir, proj.path);
-                                    if (fs.existsSync(fullPath)) {
-                                        safeExec(`git reset --hard HEAD && git clean -fd`, fullPath);
-                                    }
-                                }
                             }
-                            await updateAllStatus(); // Forçar actualització d'estat d'emergència
+                            isUpdating = false;
+                            await updateAllStatus();
                         }
 
-                        await updateDoc(doc(db, "remote_commands", change.doc.id), { 
-                            status: "completed", 
-                            completedAt: serverTimestamp() 
-                        });
+                        await updateDoc(doc(db, "remote_commands", change.doc.id), { status: 'completed', completedAt: serverTimestamp() });
                         console.log("✅ Ordre executada correctament.");
                     } catch (err) {
                         console.error("❌ Error processant ordre:", err);
-                        await updateDoc(doc(db, "remote_commands", change.doc.id), { 
-                            status: "failed", 
-                            error: err.message 
-                        });
+                        await updateDoc(doc(db, "remote_commands", change.doc.id), { status: 'error', error: err.message });
                     }
                 }
             }
-        });
+        }
     });
 }
 
