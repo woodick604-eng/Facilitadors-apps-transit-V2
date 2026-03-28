@@ -1,7 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, onSnapshot, query, orderBy, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { Shield, RefreshCw, TriangleAlert, CircleCheck, Activity, Clock, Database, GitBranch, ExternalLink, Mic, Camera, FileText, Images, Search, LayoutGrid } from 'lucide-react';
+import { 
+  Shield, 
+  RefreshCw, 
+  TriangleAlert, 
+  CircleCheck, 
+  Activity, 
+  Clock, 
+  Database, 
+  GitBranch, 
+  ExternalLink, 
+  Mic, 
+  Camera, 
+  FileText, 
+  Images, 
+  Search, 
+  LayoutGrid,
+  ShieldCheck,
+  History,
+  Lock
+} from 'lucide-react';
 import './index.css';
 
 const fbConfig = {
@@ -68,31 +87,51 @@ function App() {
     alert(`Ordre ${type} enviada correctament!`);
   };
 
-  const restaurarSistema = (date: string, projectName: string) => {
-    const d = date.split(' ')[0];
-    if(!confirm(`⚠️ ATENCIÓ: Vols restaurar ${projectName.toUpperCase()} a la data ${d}? Es perdran els canvis no commitejats.`)) return;
-    sendCommand('PANIC_ROLLBACK', { date: d, projectId: projectName });
-  };
-
   const createCheckpoint = () => {
     const msg = prompt('Descripció del PUNT DE CONTROL (Checkpoint):', 'Versió estable ' + new Date().toLocaleDateString());
     if(!msg) return;
     sendCommand('CREATE_CHECKPOINT', { msg });
   };
 
+  const openApp = (url: string) => {
+    window.open(url, '_blank');
+  };
+
   if (!auth.ok) {
     return (
-      <div className="login-screen" style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0f1a'}}>
-        <form onSubmit={handleLogin} style={{background: '#161e2e', padding: '3rem', borderRadius: '2rem', border: '1px solid rgba(255,255,255,0.1)', width: '350px', display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
-           <div style={{textAlign: 'center', marginBottom: '1rem'}}>
-              <h1 style={{color: 'white', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '2px'}}>ATENEA HUB</h1>
-              <p style={{color: 'var(--accent)', fontSize: '0.6rem', fontWeight: 800, marginTop: '0.5rem'}}>SISTEMA DE CONTROL RESTRINGIT</p>
-           </div>
-           <input type="text" placeholder="USUARI" value={auth.user} onChange={e => setAuth({...auth, user: e.target.value})} style={{padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', color: 'white', outline: 'none', textAlign: 'center', fontSize: '1rem', fontWeight: 900}} />
-           <input type="password" placeholder="PASSWORD" value={auth.pass} onChange={e => setAuth({...auth, pass: e.target.value})} style={{padding: '1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '1rem', color: 'white', outline: 'none', textAlign: 'center', fontSize: '1rem', fontWeight: 900}} />
-           <button type="submit" style={{padding: '1rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '1rem', fontWeight: 900, cursor: 'pointer', transition: 'all 0.2s'}}>ACCEDIR MONITOR</button>
-           <p style={{color: 'rgba(255,255,255,0.3)', fontSize: '0.5rem', textAlign: 'center'}}>ACCÈS PERMUTAT • AES-256</p>
+      <div className="login-screen" style={{minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #020617 100%)', color: 'white', textAlign: 'center', padding: '2rem'}}>
+        <div style={{width: '120px', height: '160px', marginBottom: '2rem', borderRadius: '1.5rem', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)'}}>
+          <img src="https://facilitadors-transit.web.app/escud-transit-v2.png" style={{width:'100%', height:'100%', objectFit:'cover'}} alt="Escut Mossos" />
+        </div>
+        <h1 style={{fontSize: '2rem', fontWeight: '900', letterSpacing: '-0.02em', marginBottom: '0.5rem'}}>ATENEA HUB MONITOR</h1>
+        <p style={{color: 'rgba(255,255,255,0.5)', maxWidth: '400px', fontSize: '1rem', lineHeight: '1.6'}}>Esperant validació del Facilitador Principal...</p>
+        
+        <form onSubmit={handleLogin} style={{marginTop: '2rem', background: 'rgba(255,255,255,0.05)', padding: '2rem', borderRadius: '1.5rem', border: '1px solid rgba(255,255,255,0.1)', width: '300px', display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+          <input 
+            type="text" 
+            placeholder="Usuari TIP" 
+            value={auth.user} 
+            onChange={e => setAuth({...auth, user: e.target.value})}
+            style={{background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.8rem', borderRadius: '0.8rem', color: 'white', textAlign: 'center'}}
+          />
+          <input 
+            type="password" 
+            placeholder="PIN de Monitor" 
+            value={auth.pass} 
+            onChange={e => setAuth({...auth, pass: e.target.value})}
+            style={{background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', padding: '0.8rem', borderRadius: '0.8rem', color: 'white', textAlign: 'center'}}
+          />
+          <button type="submit" style={{background: '#3b82f6', color: 'white', padding: '0.8rem', borderRadius: '0.8rem', fontWeight: 'bold', border: 'none', cursor: 'pointer'}}>ACCEDIR AL MONITOR</button>
         </form>
+
+        <div style={{marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '1rem'}}>
+           <div className="loading-dots" style={{display:'flex', gap:'8px'}}>
+              <div style={{width:'10px', height:'10px', backgroundColor:'#3b82f6', borderRadius:'50%', animation:'pulse 1.5s infinite'}}></div>
+              <div style={{width:'10px', height:'10px', backgroundColor:'#3b82f6', borderRadius:'50%', animation:'pulse 1.5s infinite 0.2s'}}></div>
+              <div style={{width:'10px', height:'10px', backgroundColor:'#3b82f6', borderRadius:'50%', animation:'pulse 1.5s infinite 0.4s'}}></div>
+           </div>
+        </div>
+        <style>{`@keyframes pulse { 0%, 100% { transform: scale(0.8); opacity: 0.3; } 50% { transform: scale(1.2); opacity: 1; } }`}</style>
       </div>
     );
   }
@@ -107,8 +146,8 @@ function App() {
         <nav className="sidebar-nav">
           <div className={`nav-item ${activeTab === 'apps' ? 'active' : ''}`} onClick={() => setActiveTab('apps')}><LayoutGrid size={18} /> Aplicacions</div>
           <div className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}><Activity size={18} /> Monitor Server</div>
-          <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><Clock size={18} /> Historial</div>
-          <div className={`nav-item ${activeTab === 'backups' ? 'active' : ''}`} onClick={() => setActiveTab('backups')}><Database size={18} /> Backups</div>
+          <div className={`nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}><History size={18} /> Historial</div>
+          <div className={`nav-item ${activeTab === 'backups' ? 'active' : ''}`} onClick={() => setActiveTab('backups')}><Database size={18} /> Punts Control</div>
         </nav>
         
         <div className="monitor-health">
@@ -131,7 +170,7 @@ function App() {
             </header>
             <div className="project-grid">
               {APP_LINKS.map(app => (
-                <div key={app.id} className="project-card app-launcher-card" onClick={() => window.open(app.url, '_blank')}>
+                <div key={app.id} className="project-card app-launcher-card" onClick={() => openApp(app.url)}>
                    <div className="card-header">
                       <div className="project-icon-ring"><app.icon size={22} /></div>
                       <span className="project-status-badge online">ACTIVA</span>
@@ -167,47 +206,60 @@ function App() {
             </header>
 
             <div className="project-grid">
-              {projs.map(p => (
-                <div key={p.id} className="project-card">
-                  <div className="card-header">
-                    <div className="project-icon-ring"><GitBranch size={22} /></div>
-                    <span className={`project-status-badge ${p.status === 'online' ? 'online' : 'offline'}`}>{p.status?.toUpperCase()}</span>
-                  </div>
-                  <div className="project-body">
-                    <h3>{p.id?.toUpperCase()}</h3>
-                    <div className="status-indicator">
-                        {p.hasUncommited ? <span className="warn"><TriangleAlert size={12} /> Pendent</span> : <span className="success"><CircleCheck size={12} /> Net</span>}
+              {projs.map(p => {
+                const projectRecs = recs.filter((r: any) => r.projectName === p.id).slice(0, 3);
+                return (
+                  <div key={p.id} className="project-card">
+                    <div className="card-header">
+                      <div className="project-icon-ring"><GitBranch size={22} /></div>
+                      <span className={`project-status-badge ${p.status === 'online' ? 'online' : 'offline'}`}>{p.status?.toUpperCase()}</span>
+                    </div>
+                    <div className="project-body">
+                      <h3>{p.id?.toUpperCase()}</h3>
+                      <div className="status-indicator">
+                          {p.hasUncommited ? <span className="warn"><TriangleAlert size={12} /> Pendent</span> : <span className="success"><CircleCheck size={12} /> Net</span>}
+                      </div>
+
+                      <div className="stable-points-list" style={{marginTop: '1rem', background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '1rem'}}>
+                        <p style={{fontSize: '0.6rem', fontWeight: 900, color: 'var(--accent)', marginBottom: '0.5rem', letterSpacing: '1px'}}>ÚLTIMS PUNTS ESTABLES</p>
+                        {projectRecs.length > 0 ? projectRecs.map((r: any) => (
+                            <div key={r.id} className="mini-recovery-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', marginBottom: '0.4rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.3rem'}}>
+                               <span style={{opacity: 0.8}}>{r.date?.split(' ')[0]}</span>
+                               <span style={{opacity: 0.5, fontStyle: 'italic'}}>Protegit</span>
+                            </div>
+                        )) : <p style={{fontSize: '0.6rem', opacity: 0.5}}>Sense historial</p>}
+                      </div>
+                    </div>
+                    <div className="project-meta-grid">
+                      <div className="meta-box"><span className="label">BRANCA</span><span className="value">{p.branch || 'main'}</span></div>
+                      <div className="meta-box"><span className="label">ACTIVITAT</span><span className="value">{p.lastCommit || 'Recent'}</span></div>
+                    </div>
+                    <div className="card-buttons">
+                      <button onClick={(e) => { e.stopPropagation(); sendCommand('SEGELLAR_GIT_INDIVIDUAL', { projectId: p.id }); }} className="btn-card-action">Segellar</button>
+                      <button 
+                        title="Obrir carpeta" 
+                        className="btn-card-action secondary"
+                        onClick={(e) => { e.stopPropagation(); sendCommand('OPEN_PROJECT', { projectId: p.id }); }}
+                      >
+                        <ExternalLink size={14} />
+                      </button>
                     </div>
                   </div>
-                  <div className="project-meta-grid">
-                    <div className="meta-box"><span className="label">BRANCA</span><span className="value">{p.branch || 'main'}</span></div>
-                    <div className="meta-box"><span className="label">ACTIVITAT</span><span className="value">{p.lastCommit || 'Recent'}</span></div>
-                  </div>
-                  <div className="card-buttons">
-                    <button onClick={(e) => { e.stopPropagation(); sendCommand('SEGELLAR_GIT_INDIVIDUAL', { projectId: p.id }); }} className="btn-card-action">Segellar</button>
-                    <button 
-                      title="Obrir carpeta" 
-                      className="btn-card-action secondary"
-                      onClick={(e) => { e.stopPropagation(); sendCommand('OPEN_PROJECT', { projectId: p.id }); }}
-                    >
-                      <ExternalLink size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
 
         {activeTab === 'history' && (
-          <div className="history-tab">
+          <div className="history-tab" style={{padding: '2rem'}}>
              <h2>📜 Historial d'Ordres Remotes</h2>
              <div className="history-list" style={{marginTop: '2rem'}}>
                 {cmds.slice(0, 20).map(c => (
-                   <div key={c.id} className="history-row" style={{background: 'var(--bg-card)', padding: '1rem', marginBottom: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between'}}>
+                   <div key={c.id} className="history-row" style={{background: 'rgba(255,255,255,0.05)', padding: '1rem', marginBottom: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between'}}>
                       <div>
-                         <span style={{color: 'var(--accent)', fontWeight: 800}}>{c.type}</span>
-                         <span style={{color: 'var(--text-secondary)', marginLeft: '1rem'}}>{new Date(c.time).toLocaleString()}</span>
+                         <span style={{color: '#3b82f6', fontWeight: 800}}>{c.type}</span>
+                         <span style={{color: 'rgba(255,255,255,0.5)', marginLeft: '1rem'}}>{new Date(c.time).toLocaleString()}</span>
                       </div>
                       <span className={`status-badge ${c.status}`} style={{fontSize: '0.6rem'}}>{c.status?.toUpperCase()}</span>
                    </div>
@@ -217,22 +269,19 @@ function App() {
         )}
 
         {activeTab === 'backups' && (
-          <section className="recovery-section">
-            <div className="section-title">
-               <Database size={20} color="var(--accent)" />
-               <h2>Punts de Restauració de Sistema</h2>
+          <section className="recovery-section" style={{padding: '2rem'}}>
+            <div className="section-title" style={{display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem'}}>
+               <Database size={24} color="#3b82f6" />
+               <h2 style={{fontSize: '1.5rem', fontWeight: 'bold'}}>Punts de Restauració de Sistema</h2>
             </div>
-            <div className="recovery-list">
+            <div className="recovery-list" style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
               {recs.map(r => (
-                <div key={r.id} className="recovery-card">
+                <div key={r.id} className="recovery-card" style={{background: 'rgba(255,255,255,0.05)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                   <div className="recovery-main">
-                    <span className="recovery-tag" style={{background: 'var(--primary)', color: 'white'}}>{r.projectName?.toUpperCase() || 'SISTEMA'}</span>
-                    <span className="recovery-msg">{r.msg}</span>
-                    <div className="recovery-details">{r.date} • {r.hash?.substring(0,8)}</div>
+                    <span className="recovery-tag" style={{background: '#3b82f6', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '0.4rem', fontSize: '0.7rem', fontWeight: 'bold', marginRight: '1rem'}}>{r.projectName?.toUpperCase() || 'SISTEMA'}</span>
+                    <span className="recovery-msg" style={{fontWeight: 'bold'}}>{r.msg}</span>
+                    <div className="recovery-details" style={{color: '#3b82f6', fontWeight: 'bold', marginTop: '0.5rem', fontSize: '0.8rem'}}>Recuperació només via Antigravity</div>
                   </div>
-                  <button className="btn-restore-action" onClick={() => restaurarSistema(r.date, r.projectName || 'sistema')}>
-                      <RefreshCw size={14} /> Restaurar
-                  </button>
                 </div>
               ))}
             </div>
@@ -242,6 +291,5 @@ function App() {
     </div>
   );
 }
-
 
 export default App;

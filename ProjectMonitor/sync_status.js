@@ -24,8 +24,8 @@ const projectPaths = [
     { id: 'facilitador', path: "Facilitador apps transit/Facilitadors-apps-transit" },
     { id: 'dictat-atenea', path: "Dictat Atenea App/Dictat-Atenea" },
     { id: 'reanomenador', path: "Reducto reanomenador i classificador de fotos/processador-d-imatges-d-informes-d-accidents" },
-    { id: 'informe-vector', path: "urivi-analitzador-de-fotos-d'accidents-forense-vector-5085" },
     { id: 'informe-atenea', path: "infofoto atenea" },
+    { id: 'informe-vector', path: "infofoto urivi 3" },
     { id: 'simptomatologia', path: "simptomatologia/Actes-o-oficis" },
     { id: 'dictat-minutes', path: "dictation app/dictation-app-main" }
 ];
@@ -140,18 +140,8 @@ async function listenForCommands() {
                             isUpdating = false;
                             await updateAllStatus();
                         } else if (cmd.type === "PANIC_ROLLBACK") {
-                            console.log(`🚨 EXECUTANT ROLLBACK...`);
-                            isUpdating = true;
-                            const target = cmd.projectId ? [projectPaths.find(p => p.id === cmd.projectId)] : projectPaths;
-                            for (const proj of target) {
-                                if (proj) {
-                                    const fullPath = path.join(projectsDir, proj.path);
-                                    cleanGitLock(fullPath);
-                                    safeExec(`git reset --hard HEAD && git clean -fd`, fullPath);
-                                }
-                            }
-                            isUpdating = false;
-                            await updateAllStatus();
+                            console.log(`🚫 INTENT DE ROLLBACK BLOQUEJAT: La norma estricta impedeix la recuperació des del Hub. Destí: ${cmd.hash || cmd.date || 'HEAD'}`);
+                            throw new Error("Recuperació bloquejada per política de seguretat. Contacti amb Antigravity.");
                         }
 
                         await updateDoc(doc(db, "remote_commands", change.doc.id), { status: 'completed', completedAt: serverTimestamp() });
