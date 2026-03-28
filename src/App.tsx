@@ -467,7 +467,7 @@ export default function App() {
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2 mb-3">Personal Autoritzat • UNITAT DE TRÀNSIT</p>
             <div className="flex items-center justify-center gap-2 opacity-50">
               <AgentBadge tip="@5085" className="text-[10px] px-1.5 py-0.5" /> 
-              <span className="text-slate-400 text-[8px] tracking-widest font-black uppercase">• Versió 2.44</span>
+              <span className="text-slate-400 text-[8px] tracking-widest font-black uppercase">• Versió 2.50</span>
             </div>
           </div>
 
@@ -566,7 +566,7 @@ export default function App() {
             <h1 className="text-3xl font-black text-white tracking-tighter uppercase">MOSSOS D'ESQUADRA</h1>
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.44</span>
+              <span className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.50</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -574,15 +574,36 @@ export default function App() {
 
         <div className="flex items-center gap-8">
           <div className="text-right flex items-center gap-6">
-            {currentUser?.tip === 'PG005085' && (
-              <button onClick={() => setShowAdmin(!showAdmin)} className={`relative p-4 rounded-xl border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}>
-                <Users className="w-6 h-6" />
-                {activeAgents.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#0f172a] animate-pulse font-black">
-                    {activeAgents.length}
-                  </span>
-                )}
-              </button>
+            {(currentUser?.tip === 'PG005085' || currentUser?.tip?.includes('5085')) && (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    logActivity('Obertura Project Monitor');
+                    setActiveApp({
+                      id: 'project-monitor',
+                      title: 'INFRASTRUCTURE MONITOR',
+                      description: 'Control de desplegament i salut del sistema.',
+                      url: 'http://localhost:3000', // En dev és localhost, en prod canviarà a la de firebase
+                      icon: Monitor,
+                      category: 'gestio',
+                      status: 'online',
+                      code: 'SYS-MON'
+                    });
+                  }}
+                  className="flex items-center gap-2 p-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 font-black text-[10px] uppercase tracking-widest border border-white/20"
+                >
+                  <Monitor className="w-5 h-5" /> MOSTRAR MONITOR
+                </button>
+                <div className="w-px h-8 bg-white/10 mx-2" />
+                <button onClick={() => setShowAdmin(!showAdmin)} className={`relative p-4 rounded-xl border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}>
+                  <Users className="w-6 h-6" />
+                  {activeAgents.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] w-6 h-6 rounded-full flex items-center justify-center border-2 border-[#0f172a] animate-pulse font-black">
+                      {activeAgents.length}
+                    </span>
+                  )}
+                </button>
+              </div>
             )}
             <div className="hidden lg:block text-right">
               <span className="block text-4xl font-mono font-black text-white tracking-tighter tabular-nums leading-none">
@@ -615,7 +636,7 @@ export default function App() {
         </div>
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 flex justify-center items-center px-10">
-        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.44 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.50 • AES-256 ENCRYPTION ACTIVE</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per 5085) */}
@@ -1065,7 +1086,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, onResetPi
   );
 }
 
-function AppCard({ link, index, onClick }: { link: AppLink, index: number, onClick: () => void }) {
+function AppCard({ link, index, onClick }: { link: AppLink, index: number, onClick: () => void, key?: string | number }) {
   const Icon = link.icon;
   const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'gestor-casos' || link.id === 'minutes';
 

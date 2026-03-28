@@ -1,0 +1,149 @@
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, serverTimestamp, collection, onSnapshot, updateDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+
+const firebaseConfig = {
+    apiKey: "AIzaSyByZ75L4F1c9r_rL_C3k_vJpS7XpXpXpX0",
+    authDomain: "facilitadors-transit.firebaseapp.com",
+    projectId: "facilitadors-transit",
+    storageBucket: "facilitadors-transit.firebasestorage.app",
+    messagingSenderId: "719513203160",
+    appId: "1:719513203160:web:a68fc25fd89a8beaa882ad"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const projectsDir = "/Users/alex/Documents/";
+const projectPaths = [
+    { id: 'facilitador', path: "Facilitador apps transit/Facilitadors-apps-transit" },
+    { id: 'dictat-atenea', path: "Dictat Atenea App/Dictat-Atenea" },
+    { id: 'reanomenador', path: "Reducto reanomenador i classificador de fotos/processador-d-imatges-d-informes-d-accidents" },
+    { id: 'informe-vector', path: "urivi-analitzador-de-fotos-d'accidents-forense-vector-5085" },
+    { id: 'informe-atenea', path: "infofoto atenea" },
+    { id: 'simptomatologia', path: "simptomatologia/Actes-o-oficis" },
+    { id: 'dictat-minutes', path: "dictation app/dictation-app-main" }
+];
+
+console.log("🚀 INICIANT MONITOR D'ADMINISTRACIÓ (DAEMON)...");
+
+// Funció segura per executar Git amb timeout (evita bloquejos)
+function safeExec(cmd, cwd) {
+    try {
+        return execSync(cmd, { cwd, encoding: 'utf8', timeout: 5000 }).trim();
+    } catch (e) {
+        return null;
+    }
+}
+
+async function updateAllStatus() {
+    console.log(`[${new Date().toLocaleTimeString()}] 🔄 Sincronitzant estat dels projectes...`);
+    
+    for (const project of projectPaths) {
+        const fullPath = path.join(projectsDir, project.path);
+        let data = {
+            id: project.id,
+            status: 'offline',
+            branch: 'N/A',
+            lastCommit: 'N/A',
+            hasUncommited: false
+        };
+
+        if (fs.existsSync(fullPath)) {
+            data.status = 'online';
+            data.branch = safeExec(`git rev-parse --abbrev-ref HEAD`, fullPath) || 'main';
+            data.lastCommit = safeExec(`git log -1 --format=%cd --date=relative`, fullPath) || 'Recent';
+            const statusStr = safeExec(`git status --porcelain`, fullPath);
+            data.hasUncommited = statusStr ? statusStr.length > 0 : false;
+        }
+
+        try {
+            await setDoc(doc(db, 'system_status', project.id), {
+                ...data,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+        } catch (e) {
+            console.error(`❌ Error sincronitzant ${project.id}:`, e.message);
+        }
+    }
+}
+
+const startTime = new Date();
+
+function listenForCommands() {
+    console.log("📡 Escoltant ordres del Dashboard (remote_commands)...");
+    console.log("🛡️ MODE SEGUR: Només s'executaran ordres creades després de: " + startTime.toLocaleTimeString());
+    
+    onSnapshot(collection(db, "remote_commands"), (snapshot) => {
+        snapshot.docChanges().forEach(async (change) => {
+            if (change.type === "added") {
+                const cmd = change.doc.data();
+                
+                // Ignorar ordres antigues o ja processades
+                const cmdTime = cmd.time ? new Date(cmd.time) : new Date(0);
+                if (cmd.status === "pending" && cmdTime > startTime) {
+                    console.log(`⚡ ORDRE REBUDA (@${cmdTime.toLocaleTimeString()}): ${cmd.type}`);
+                    
+                    try {
+                        if (cmd.type === "SEGELLAR_GIT") {
+                            console.log("🛡️ Segellant tots els projectes (Git Commit)...");
+                            for (const proj of projectPaths) {
+                                const fullPath = path.join(projectsDir, proj.path);
+                                if (fs.existsSync(fullPath)) {
+                                    console.log(`   📦 Commitejant ${proj.id}...`);
+                                    safeExec(`git add . && git commit -m "Segellat manual des de Dashboard (Tot): ${new Date().toISOString()}" || echo "Res a commitejar"`, fullPath);
+                                }
+                            }
+                        } else if (cmd.type === "SEGELLAR_GIT_INDIVIDUAL" && cmd.projectId) {
+                            console.log(`🛡️ Segellant projecte individual: ${cmd.projectId}`);
+                            const proj = projectPaths.find(p => p.id === cmd.projectId);
+                            if (proj) {
+                                const fullPath = path.join(projectsDir, proj.path);
+                                if (fs.existsSync(fullPath)) {
+                                    safeExec(`git add . && git commit -m "Segellat manual des de Dashboard (${cmd.projectId}): ${new Date().toISOString()}" || echo "Res a commitejar"`, fullPath);
+                                }
+                            }
+                        } else if (cmd.type === "PANIC_ROLLBACK") {
+                            console.log(`🚨 PÀNIC! Revertint a ${cmd.date}...`);
+                            // Només s'executa si l'usuari ho demana explícitament avui
+                            execSync(`node panic_revert.js ${cmd.date}`, { stdio: 'inherit' });
+                        }
+
+                        await updateDoc(doc(db, "remote_commands", change.doc.id), { 
+                            status: "completed", 
+                            completedAt: serverTimestamp() 
+                        });
+                        console.log("✅ Ordre executada correctament.");
+                        // Sincronitzem l'estat immediatament després d'una acció
+                        await updateAllStatus(); 
+                    } catch (err) {
+                        console.error("❌ Error processant ordre:", err);
+                        await updateDoc(doc(db, "remote_commands", change.doc.id), { 
+                            status: "failed", 
+                            error: err.message 
+                        });
+                    }
+                }
+            }
+        });
+    });
+}
+
+// Execució principal
+async function start() {
+    // 1. Primer sincronitzem tot una vegada en arrencar
+    await updateAllStatus();
+    
+    // 2. Iniciem l'escolta en temps real d'ordres (Això SEMPRE és instantani)
+    listenForCommands();
+    
+    // 3. Programem actualitzacions d'estat periòdiques (Cada 10 minuts: 600000ms)
+    // Això estalvia escriptures a Firestore i només sincronitza l'estat si t'ho has oblidat obert.
+    setInterval(updateAllStatus, 600000);
+}
+
+start().catch(console.error);
+
+

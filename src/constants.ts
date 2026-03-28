@@ -48,20 +48,20 @@ export const APP_LINKS: AppLink[] = [
     code: 'RF-02'
   },
   {
-    id: 'renombrador-auto',
-    title: '3. Reanomenador de Fotografies (Auto) (PER ATENEA)',
-    description: 'Plataforma per reduir i reanomenar fotos de forma totalment automàtica.',
-    url: 'https://atenea-fotos.web.app/',
-    icon: Camera,
+    id: 'informe-atenea',
+    title: '3. Informe fotogràfic (NOMÉS PER ATENEA)',
+    description: 'Per enviar a Jutjats (p.ex. T32+T06) o informes de Transports. (Triga una mica a obrir-se)',
+    url: 'https://infofoto-vector-art.web.app/',
+    icon: FileImage,
     category: 'imatges',
     status: 'online',
-    code: 'RFA-03'
+    code: 'IFA-03'
   },
   {
-    id: 'informe-auto',
-    title: '4. Informe Fotogràfic Automàtic (PER JUTJATS o D\'ALTRES)',
-    description: 'Generador automàtic d\'informes fotogràfics tècnics. (Triga una mica a obrir-se)',
-    url: 'https://infofoto-vector-art.web.app/',
+    id: 'informe-vector',
+    title: '4. Informe fotogràfic automàtic (NOMÉS PER A VECTOR)',
+    description: 'Per adjuntar a Atestats. (Triga una mica a obrir-se)',
+    url: 'https://infofoto-urivi-3-service-177830712484.europe-west1.run.app/',
     icon: FileImage,
     category: 'imatges',
     status: 'online',
