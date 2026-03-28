@@ -126,6 +126,19 @@ async function listenForCommands() {
                             if (proj) {
                                 safeExec(`open "${path.join(projectsDir, proj.path)}"`);
                             }
+                        } else if (cmd.type === "CREATE_CHECKPOINT") {
+                            console.log(`🛡️ CREANT CHECKPOINT DE SEGURETAT: ${cmd.msg}`);
+                            isUpdating = true;
+                            const tag = `checkpoint-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16)}`;
+                            for (const proj of projectPaths) {
+                                const fullPath = path.join(projectsDir, proj.path);
+                                if (fs.existsSync(fullPath)) {
+                                    cleanGitLock(fullPath);
+                                    safeExec(`git add . && git commit -m "CHECKPOINT: ${cmd.msg}" && git tag ${tag}`, fullPath);
+                                }
+                            }
+                            isUpdating = false;
+                            await updateAllStatus();
                         } else if (cmd.type === "PANIC_ROLLBACK") {
                             console.log(`🚨 EXECUTANT ROLLBACK...`);
                             isUpdating = true;

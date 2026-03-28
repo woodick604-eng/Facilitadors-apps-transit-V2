@@ -583,7 +583,7 @@ export default function App() {
                       id: 'project-monitor',
                       title: 'INFRASTRUCTURE MONITOR',
                       description: 'Control de desplegament i salut del sistema.',
-                      url: 'http://localhost:3000', // En dev és localhost, en prod canviarà a la de firebase
+                      url: 'https://atenea-hub-monitor.web.app', // En prod usem el nou domini dedicat
                       icon: Monitor,
                       category: 'gestio',
                       status: 'online',

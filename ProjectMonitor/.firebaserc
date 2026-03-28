@@ -1,0 +1,13 @@
+{
+  "projects": {},
+  "targets": {
+    "facilitadors-transit": {
+      "hosting": {
+        "admin-monitor": [
+          "atenea-hub-monitor"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
