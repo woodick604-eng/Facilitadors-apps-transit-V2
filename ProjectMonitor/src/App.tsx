@@ -84,13 +84,30 @@ function App() {
   const sendCommand = async (type: string, data: any = {}) => {
     const cmd = { type, status: 'pending', time: new Date().toISOString(), ...data };
     await addDoc(collection(db, 'remote_commands'), cmd);
-    alert(`Ordre ${type} enviada correctament!`);
+    // Not alert, let UI show status in history
   };
 
   const createCheckpoint = () => {
+    const ref = prompt('NÚMERO DE REFERÈNCIA / INCIDENT:', '');
+    if(!ref) { alert('Cal un número de referència per segellar.'); return; }
     const msg = prompt('Descripció del PUNT DE CONTROL (Checkpoint):', 'Versió estable ' + new Date().toLocaleDateString());
     if(!msg) return;
-    sendCommand('CREATE_CHECKPOINT', { msg });
+    sendCommand('CREATE_CHECKPOINT', { msg, ref });
+    alert(`Ordre de Segellat ${ref} enviada.`);
+  };
+
+  const handleSegellarTot = () => {
+    const ref = prompt('NÚMERO DE REFERÈNCIA / INCIDENT PER SEGELLAR TOT:', '');
+    if(!ref) { alert('Cal un número de referència per segellar.'); return; }
+    sendCommand('SEGELLAR_GIT', { ref });
+    alert(`Ordre de Segellat Global ${ref} enviada.`);
+  };
+
+  const handleSegellarIndividual = (projectId: string) => {
+    const ref = prompt(`NÚMERO DE REFERÈNCIA PER SEGELLAR ${projectId.toUpperCase()}:`, '');
+    if(!ref) { alert('Cal un número de referència per segellar.'); return; }
+    sendCommand('SEGELLAR_GIT_INDIVIDUAL', { projectId, ref });
+    alert(`Ordre de Segellat ${ref} per ${projectId} enviada.`);
   };
 
   const openApp = (url: string) => {
@@ -197,9 +214,9 @@ function App() {
               </div>
               <div className="header-actions" style={{display: 'flex', gap: '1rem'}}>
                 <button onClick={createCheckpoint} className="btn-primary" style={{background: 'var(--accent)'}}>
-                  <Shield size={18} /> CHECKPOINT DE SEGURETAT
+                  <Shield size={18} /> CHECKPOINT SEGUR
                 </button>
-                <button onClick={() => sendCommand('SEGELLAR_GIT')} className="btn-primary">
+                <button onClick={handleSegellarTot} className="btn-primary">
                   <Shield size={18} /> SEGELLAR TOT (GIT)
                 </button>
               </div>
@@ -235,7 +252,7 @@ function App() {
                       <div className="meta-box"><span className="label">ACTIVITAT</span><span className="value">{p.lastCommit || 'Recent'}</span></div>
                     </div>
                     <div className="card-buttons">
-                      <button onClick={(e) => { e.stopPropagation(); sendCommand('SEGELLAR_GIT_INDIVIDUAL', { projectId: p.id }); }} className="btn-card-action">Segellar</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleSegellarIndividual(p.id); }} className="btn-card-action">Segellar (Ref)</button>
                       <button 
                         title="Obrir carpeta" 
                         className="btn-card-action secondary"
@@ -280,7 +297,7 @@ function App() {
                   <div className="recovery-main">
                     <span className="recovery-tag" style={{background: '#3b82f6', color: 'white', padding: '0.2rem 0.6rem', borderRadius: '0.4rem', fontSize: '0.7rem', fontWeight: 'bold', marginRight: '1rem'}}>{r.projectName?.toUpperCase() || 'SISTEMA'}</span>
                     <span className="recovery-msg" style={{fontWeight: 'bold'}}>{r.msg}</span>
-                    <div className="recovery-details" style={{color: '#3b82f6', fontWeight: 'bold', marginTop: '0.5rem', fontSize: '0.8rem'}}>Recuperació només via Antigravity</div>
+                    <div className="recovery-details" style={{color: '#3b82f6', fontWeight: 'bold', marginTop: '0.5rem', fontSize: '0.8rem'}}>Seguretat: Només backups de Git i Checkpoints amb Ref.</div>
                   </div>
                 </div>
               ))}

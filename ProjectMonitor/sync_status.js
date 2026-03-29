@@ -99,25 +99,27 @@ async function listenForCommands() {
                     
                     try {
                         if (cmd.type === "SEGELLAR_GIT") {
-                            console.log("🛡️ Segellant tots els projectes (Git Commit)...");
+                            const ref = cmd.ref || "SENSE_REF";
+                            console.log(`🛡️ Segellant tots els projectes amb Ref: ${ref} (Git Commit)...`);
                             isUpdating = true;
                             for (const proj of projectPaths) {
                                 const fullPath = path.join(projectsDir, proj.path);
                                 if (fs.existsSync(fullPath)) {
-                                    console.log(`   📦 Commitejant ${proj.id}...`);
+                                    console.log(`   📦 Commitejant ${proj.id} [${ref}]...`);
                                     cleanGitLock(fullPath);
-                                    safeExec(`git add . && git commit -m "Segellat manual (Tot): ${new Date().toISOString()}" || echo "Res"`, fullPath);
+                                    safeExec(`git add . && git commit -m "Segellat Global [REF: ${ref}]: ${new Date().toISOString()}" || echo "Res"`, fullPath);
                                 }
                             }
                             isUpdating = false;
                             await updateAllStatus();
                         } else if (cmd.type === "SEGELLAR_GIT_INDIVIDUAL" && cmd.projectId) {
-                            console.log(`🛡️ Segellant projecte individual: ${cmd.projectId}`);
+                            const ref = cmd.ref || "SENSE_REF";
+                            console.log(`🛡️ Segellant projecte individual ${cmd.projectId} amb Ref: ${ref}`);
                             const proj = projectPaths.find(p => p.id === cmd.projectId);
                             if (proj) {
                                 const fullPath = path.join(projectsDir, proj.path);
                                 cleanGitLock(fullPath);
-                                safeExec(`git add . && git commit -m "Segellat individual: ${new Date().toISOString()}" || echo "Res"`, fullPath);
+                                safeExec(`git add . && git commit -m "Segellat Individual [APP: ${cmd.projectId}] [REF: ${ref}]: ${new Date().toISOString()}" || echo "Res"`, fullPath);
                             }
                             await updateAllStatus();
                         } else if (cmd.type === "OPEN_PROJECT" && cmd.projectId) {
@@ -127,14 +129,15 @@ async function listenForCommands() {
                                 safeExec(`open "${path.join(projectsDir, proj.path)}"`);
                             }
                         } else if (cmd.type === "CREATE_CHECKPOINT") {
-                            console.log(`🛡️ CREANT CHECKPOINT DE SEGURETAT: ${cmd.msg}`);
+                            const ref = cmd.ref || "SENSE_REF";
+                            console.log(`🛡️ CREANT CHECKPOINT SEGUR [REF: ${ref}]: ${cmd.msg}`);
                             isUpdating = true;
                             const tag = `checkpoint-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 16)}`;
                             for (const proj of projectPaths) {
                                 const fullPath = path.join(projectsDir, proj.path);
                                 if (fs.existsSync(fullPath)) {
                                     cleanGitLock(fullPath);
-                                    safeExec(`git add . && git commit -m "CHECKPOINT: ${cmd.msg}" && git tag ${tag}`, fullPath);
+                                    safeExec(`git add . && git commit -m "CHECKPOINT [REF: ${ref}]: ${cmd.msg}" && git tag ${tag}`, fullPath);
                                 }
                             }
                             isUpdating = false;
