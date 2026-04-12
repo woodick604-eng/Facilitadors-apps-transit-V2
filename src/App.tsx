@@ -46,6 +46,7 @@ export default function App() {
   const [rankLogs, setRankLogs] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [dictatLogs, setDictatLogs] = useState<any[]>([]);
+  const [appStatuses, setAppStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const hasAccepted = localStorage.getItem('legal_accepted_v_global');
@@ -185,12 +186,22 @@ export default function App() {
         setRankLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
 
+      const q6 = collection(db, 'app_status');
+      const unsubscribe6 = onSnapshot(q6, (snapshot) => {
+        const statuses: Record<string, string> = {};
+        snapshot.docs.forEach(doc => {
+          statuses[doc.id] = doc.data().status;
+        });
+        setAppStatuses(statuses);
+      });
+
       return () => {
         unsubscribe1();
         unsubscribe2();
         unsubscribe3();
         unsubscribe4();
         unsubscribe5();
+        unsubscribe6();
       };
     }
   }, [currentUser, showAdmin]);
@@ -240,7 +251,7 @@ export default function App() {
 
     logs.forEach(log => {
       const logDate = log.timestamp?.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
-      if (now.getTime() - logDate.getTime() < threshold && log.tip !== 'PG005085') {
+      if (now.getTime() - logDate.getTime() < threshold && !log.isAdmin) {
         if (!active.has(log.tip)) {
           active.set(log.tip, { tip: log.tip, name: log.name, lastSeen: logDate });
         }
@@ -343,6 +354,19 @@ export default function App() {
     }
   };
 
+  const handleToggleAppStatus = async (appId: string, currentStatus: string) => {
+    try {
+      const newStatus = currentStatus === 'online' ? 'maintenance' : 'online';
+      await setDoc(doc(db, 'app_status', appId), {
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      logActivity('Canvi estat app (Admin)', { target: appId, status: newStatus });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const iframeUrl = useMemo(() => {
     if (!activeApp) return '';
     return `${activeApp.url}${activeApp.url.includes('?') ? '&' : '?'}v=${Date.now()}`;
@@ -396,7 +420,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {currentUser?.tip === 'PG005085' && (
+            {currentUser?.isAdmin && (
               <button
                 onClick={() => { logActivity('Obertura Dashboard (Iframe)'); setShowAdmin(!showAdmin); setActiveApp(null); }}
                 className={`p-2 rounded-lg border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
@@ -756,7 +780,7 @@ export default function App() {
 
         <div className="flex items-center gap-8">
           <div className="text-right flex items-center gap-6">
-            {(currentUser?.tip === 'PG005085' || currentUser?.tip?.includes('5085')) && (
+            {currentUser?.isAdmin && (
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => {
@@ -824,12 +848,32 @@ export default function App() {
       <main className="flex-1 p-10 overflow-y-auto">
         <div className="max-w-7xl mx-auto h-full">
           {showAdmin && currentUser?.isAdmin ? (
-            <AdminDashboard logs={logs} costLogs={costLogs} rankLogs={rankLogs} users={usersList} dictatLogs={dictatLogs} onResetPin={handleAdminPinReset} onToggleStatus={handleToggleUserStatus} onCreateUser={handleCreateUser} onUpdateName={handleUpdateUserName} />
+            <AdminDashboard 
+              logs={logs} 
+              costLogs={costLogs} 
+              rankLogs={rankLogs} 
+              users={usersList} 
+              dictatLogs={dictatLogs} 
+              appStatuses={appStatuses}
+              onResetPin={handleAdminPinReset} 
+              onToggleStatus={handleToggleUserStatus} 
+              onCreateUser={handleCreateUser} 
+              onUpdateName={handleUpdateUserName}
+              onToggleAppStatus={handleToggleAppStatus}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
-              {APP_LINKS.map((link, index) => (
-                <AppCard key={link.id} link={link} index={index} onClick={() => { logActivity('Obertura App', { app: link.title }); setActiveApp(link); }} />
-              ))}
+              {APP_LINKS.map((link, index) => {
+                const dynamicStatus = appStatuses[link.id] || link.status;
+                return (
+                  <AppCard 
+                    key={link.id} 
+                    link={{ ...link, status: dynamicStatus as any }} 
+                    index={index} 
+                    onClick={() => { logActivity('Obertura App', { app: link.title }); setActiveApp({ ...link, status: dynamicStatus as any }); }} 
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -838,8 +882,8 @@ export default function App() {
         <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.50 • AES-256 ENCRYPTION ACTIVE</p>
       </footer>
 
-      {/* Botó Flotant d'Agents Actius (Sempre Visible per 5085) */}
-      {isAuthenticated && currentUser?.tip === 'PG005085' && (
+      {/* Botó Flotant d'Agents Actius (Sempre Visible per Admins) */}
+      {isAuthenticated && currentUser?.isAdmin && (
         <div className="fixed bottom-6 right-6 z-[2000] flex flex-col items-end gap-3 pointer-events-none">
           <AnimatePresence>
             {activeAgents.length > 0 && (
@@ -973,8 +1017,8 @@ export default function App() {
   );
 }
 
-function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, onResetPin, onToggleStatus, onCreateUser, onUpdateName }: { logs: any[], costLogs: any[], rankLogs: any[], users: any[], dictatLogs: any[], onResetPin: (tip: string) => void, onToggleStatus: (tip: string, current: string) => void, onCreateUser: (tip: string, name: string) => void, onUpdateName: (tip: string, name: string) => void }) {
-  const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos' | 'dictat'>('activity');
+function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatuses, onResetPin, onToggleStatus, onCreateUser, onUpdateName, onToggleAppStatus }: { logs: any[], costLogs: any[], rankLogs: any[], users: any[], dictatLogs: any[], appStatuses: Record<string, string>, onResetPin: (tip: string) => void, onToggleStatus: (tip: string, current: string) => void, onCreateUser: (tip: string, name: string) => void, onUpdateName: (tip: string, name: string) => void, onToggleAppStatus: (appId: string, current: string) => void }) {
+  const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos' | 'dictat' | 'apps'>('activity');
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingTip, setEditingTip] = useState<string | null>(null);
@@ -990,7 +1034,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, onResetPi
     const combinedLogs = [...costLogs, ...rankLogs];
     
     combinedLogs.forEach(log => {
-      if (!log.tip || log.tip === 'PG005085') return;
+      if (!log.tip || log.isAdmin) return;
       if (!counts[log.tip]) {
         counts[log.tip] = { name: log.name, tip: log.tip, count: 0, totalCost: 0, appCounts: {} };
       }
@@ -1063,7 +1107,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, onResetPi
     const openSessions = new Map<string, any>(); // tip -> current active app session
 
     // Filter out admin logs and sort chronologically to process sequences
-    const sortedLogs = [...logs].filter(log => log.tip !== 'PG005085').sort((a, b) => {
+    const sortedLogs = [...logs].filter(log => !log.isAdmin).sort((a, b) => {
       const da = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
       const db = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
       return da.getTime() - db.getTime();
@@ -1147,6 +1191,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, onResetPi
         <button onClick={() => setActiveTab('ranking')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'ranking' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'}`}>Rànquing d'Ús</button>
         <button onClick={() => setActiveTab('costos')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'costos' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}>Despesa Mensual</button>
         <button onClick={() => setActiveTab('dictat')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'dictat' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>Informes Dictat</button>
+        <button onClick={() => setActiveTab('apps')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'apps' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>Gestió Apps</button>
       </div>
 
       {activeTab === 'users' && isAdding && (
@@ -1317,6 +1362,37 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, onResetPi
                 </div>
               ))}
               {dictatLogs.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha informes recents</p>}
+            </div>
+          ) : activeTab === 'apps' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {APP_LINKS.map((app) => {
+                const status = appStatuses[app.id] || app.status;
+                const Icon = app.icon;
+                return (
+                  <div key={app.id} className={`p-6 bg-black/20 border rounded-[2rem] flex flex-col gap-4 transition-all ${status === 'maintenance' ? 'border-amber-500/30' : 'border-white/5'}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 ${status === 'maintenance' ? 'text-amber-500' : 'text-blue-400'}`}>
+                          <Icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-[12px] font-black text-white uppercase leading-tight">{app.title}</h4>
+                          <span className="text-[8px] font-mono text-slate-500">{app.code}</span>
+                        </div>
+                      </div>
+                      <span className={`text-[8px] px-2 py-0.5 rounded font-black uppercase ${status === 'online' ? 'bg-emerald-500 text-black' : 'bg-amber-500 text-black'}`}>
+                        {status === 'online' ? 'ACTIVA' : 'OFFLINE'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => onToggleAppStatus(app.id, status)}
+                      className={`w-full py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-all active:scale-95 ${status === 'online' ? 'bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20'}`}
+                    >
+                      {status === 'online' ? 'TURNOFF / MANTENIMENT' : 'ACTIVA L\'APP'}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
