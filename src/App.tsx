@@ -228,7 +228,7 @@ export default function App() {
   }, [currentUser]);
 
   const logActivity = async (action: string, metadata: any = {}) => {
-    if (!currentUser) return;
+    if (!currentUser || currentUser.isAdmin) return;
 
     try {
       await addDoc(collection(db, 'logs'), {
