@@ -782,6 +782,7 @@ export default function App() {
           <div className="text-right flex items-center gap-6">
             {currentUser?.isAdmin && (
               <div className="flex items-center gap-2">
+                {/* 
                 <button 
                   onClick={() => {
                     logActivity('Obertura Project Monitor');
@@ -801,6 +802,7 @@ export default function App() {
                   <Monitor className="w-5 h-5" /> MOSTRAR MONITOR
                 </button>
                 <div className="w-px h-8 bg-white/10 mx-2" />
+                */}
                 <button onClick={() => setShowAdmin(!showAdmin)} className={`relative p-4 rounded-xl border transition-all ${showAdmin ? 'bg-amber-500 text-black border-amber-500' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}>
                   <Users className="w-6 h-6" />
                   {activeAgents.length > 0 && (
