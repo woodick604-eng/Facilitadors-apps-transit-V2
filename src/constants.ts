@@ -24,6 +24,7 @@ export interface AppLink {
   category: 'dictat' | 'imatges' | 'gestio';
   status: 'online' | 'offline' | 'maintenance';
   code: string;
+  maintenanceMsg?: string;
 }
 
 export const APP_LINKS: AppLink[] = [
@@ -59,13 +60,14 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'informe-vector',
-    title: '4. Informe fotogràfic automàtic (NOMÉS PER A VECTOR)',
-    description: 'Per adjuntar a Atestats. (Triga una mica a obrir-se)',
-    url: 'https://infofoto-urivi-3-service-177830712484.europe-west1.run.app/',
+    title: '4. Acta de Signes Externs de Drogues (PROXIMAMENT)',
+    description: 'Eina de nova generació per a la redacció de l\'acta de signes externs de drogues.',
+    url: 'https://la4-sintomatologia-actes.web.app/',
     icon: FileImage,
     category: 'imatges',
-    status: 'online',
-    code: 'IFA-04'
+    status: 'maintenance',
+    code: 'IFA-04',
+    maintenanceMsg: 'Pròximament Acta de Signes Externs de Drogues'
   },
   {
     id: 'gestor-casos',

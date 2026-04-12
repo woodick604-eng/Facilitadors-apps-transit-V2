@@ -1465,7 +1465,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
       {link.status === 'maintenance' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="bg-amber-500 text-black px-8 py-2 -rotate-12 font-black text-xl tracking-widest uppercase shadow-2xl border-y-2 border-dashed border-black/50 overflow-hidden w-[120%] text-center">
-            En Construcció
+            {link.maintenanceMsg || 'En Construcció'}
           </div>
         </div>
       )}
