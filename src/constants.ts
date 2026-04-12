@@ -71,7 +71,7 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'gestor-casos',
-    title: '5. Simptomatologia\n(SIGNES EXTERNS) DGT',
+    title: '5. Simptomatologia, Alcoholemia i A-21\n(SIGNES EXTERNS) DGT',
     description: 'Simptomatologia compatible segons DGT. Permet dictar o escriure les observacions i el sistema integra tota la informació automàticament.',
     url: 'https://simptomatologia.web.app/',
     icon: FolderSearch,
