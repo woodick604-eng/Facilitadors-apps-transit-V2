@@ -574,7 +574,7 @@ export default function App() {
           )}
 
           <div className="text-center mb-6 lg:mb-8">
-            <div className={`inline-flex items-center justify-center w-60 h-80 lg:w-[312px] lg:h-[416px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast relative`}>
+            <div className={`inline-flex items-center justify-center w-[270px] h-[360px] lg:w-[360px] lg:h-[480px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast relative`}>
               <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
               {/* Pilot blau Davanter (dreta, al costat de la roda far davanter) */}
               <div className="absolute w-[2.5%] h-[1.8%] bg-blue-400 rounded-full animate-police-strobe mix-blend-screen" style={{ top: '38.5%', right: '29.5%' }} />

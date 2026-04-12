@@ -41,9 +41,9 @@ body {
 }
 
 .animate-police-strobe {
-  animation: police-strobe 3s 3 forwards;
+  animation: police-strobe 3s 6 forwards;
 }
 .animate-police-strobe-delayed {
-  animation: police-strobe 3s 3 forwards 0.4s;
+  animation: police-strobe 3s 6 forwards 0.4s;
   opacity: 0.05;
 }
