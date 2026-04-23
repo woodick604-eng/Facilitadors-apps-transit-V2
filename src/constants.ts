@@ -4,7 +4,8 @@ import {
   Camera,
   FileImage,
   FolderSearch,
-  FileAudio
+  FileAudio,
+  Monitor
 } from 'lucide-react';
 
 export const MOSSOS_THEME = {
@@ -50,7 +51,7 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'informe-atenea',
-    title: '3. Informe fotogràfic (NOMÉS PER ATENEA)',
+    title: '3. Informe fotogràfic (ATENEA i URIVI)',
     description: 'Per enviar a Jutjats (p.ex. T32+T06) o informes de Transports. (Triga una mica a obrir-se)',
     url: 'https://infofoto-vector-art.web.app/',
     icon: FileImage,
@@ -60,14 +61,13 @@ export const APP_LINKS: AppLink[] = [
   },
   {
     id: 'informe-vector',
-    title: '4. Acta de Signes Externs de Drogues (PROXIMAMENT)',
+    title: '4. Acta de Signes Externs de Drogues',
     description: 'Eina de nova generació per a la redacció de l\'acta de signes externs de drogues.',
     url: 'https://la4-sintomatologia-actes.web.app/',
     icon: FileImage,
     category: 'imatges',
-    status: 'maintenance',
-    code: 'IFA-04',
-    maintenanceMsg: 'Pròximament Acta de Signes Externs de Drogues'
+    status: 'online',
+    code: 'IFA-04'
   },
   {
     id: 'gestor-casos',
@@ -88,5 +88,16 @@ export const APP_LINKS: AppLink[] = [
     category: 'gestio',
     status: 'online',
     code: 'MIN-06'
+  },
+  {
+    id: 'interpretador-veco',
+    title: '7. Interpretador de Pantalles Veco',
+    description: 'Eina en construcció per a la interpretació de dades de pantalles Veco.',
+    url: 'https://atenea-veco-001.web.app',
+    icon: Monitor,
+    category: 'gestio',
+    status: 'maintenance',
+    code: 'VECO-07',
+    maintenanceMsg: 'Aquesta eina està actualment en fase de construcció.'
   }
 ];

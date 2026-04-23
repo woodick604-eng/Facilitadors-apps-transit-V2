@@ -49,10 +49,13 @@ export default function App() {
   const [appStatuses, setAppStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    // El disclaimer no ha de aparèixer automàticament al començar
+    /*
     const hasAccepted = localStorage.getItem('legal_accepted_v_global');
     if (!hasAccepted) {
       setShowLegalModal(true);
     }
+    */
   }, []);
 
   // Real-time validation states
@@ -75,6 +78,7 @@ export default function App() {
   }, []);
 
   // Scroll al camp PIN quan el TIP es valida (util al mobil)
+  /* Comentat per petició de l'usuari per mantenir el scroll a dalt
   useEffect(() => {
     if (isTipValidated) {
       const t = setTimeout(() => {
@@ -84,6 +88,16 @@ export default function App() {
       return () => clearTimeout(t);
     }
   }, [isTipValidated]);
+  */
+
+  // Forçar scroll a dalt quan es tanca una app o s'entra al sistema
+  useEffect(() => {
+    if (!activeApp && isAuthenticated) {
+      window.scrollTo(0, 0);
+      const main = document.querySelector('main');
+      if (main) main.scrollTo(0, 0);
+    }
+  }, [activeApp, isAuthenticated]);
 
   // Real-time TIP validation logic
   useEffect(() => {
@@ -142,6 +156,19 @@ export default function App() {
     validateTip();
   }, [tipInput]);
 
+  // Escoltador d'estat de les apps (Global per a tots els usuaris)
+  useEffect(() => {
+    const q = collection(db, 'app_status');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const statuses: Record<string, string> = {};
+      snapshot.docs.forEach(doc => {
+        statuses[doc.id] = doc.data().status;
+      });
+      setAppStatuses(statuses);
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     if (currentUser?.isAdmin && showAdmin) {
       const q = query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(300));
@@ -186,22 +213,12 @@ export default function App() {
         setRankLogs(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
 
-      const q6 = collection(db, 'app_status');
-      const unsubscribe6 = onSnapshot(q6, (snapshot) => {
-        const statuses: Record<string, string> = {};
-        snapshot.docs.forEach(doc => {
-          statuses[doc.id] = doc.data().status;
-        });
-        setAppStatuses(statuses);
-      });
-
       return () => {
         unsubscribe1();
         unsubscribe2();
         unsubscribe3();
         unsubscribe4();
         unsubscribe5();
-        unsubscribe6();
       };
     }
   }, [currentUser, showAdmin]);
@@ -474,8 +491,8 @@ export default function App() {
         </div>
 
         {showLegalModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
-            <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-2xl max-h-[90vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.2)] flex flex-col relative">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
+            <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-5xl max-h-[95vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.3)] flex flex-col relative">
               
               {/* CAPÇALERA DE SEGURETAT */}
               <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-indigo-950/30">
@@ -485,7 +502,7 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Avís Legal i Propietat Intel·lectual</h2>
-                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085 - Atenea Hub System</p>
+                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085</p>
                   </div>
                 </div>
               </div>
@@ -493,6 +510,21 @@ export default function App() {
               {/* CONTINGUT JURÍDIC CLAU */}
               <div className="p-10 overflow-y-auto custom-scrollbar space-y-10 text-slate-300">
                 
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+                     <Info className="w-4 h-4" /> 0. Objectiu del Sistema
+                  </h3>
+                  <div className="text-[12px] font-bold text-amber-500 space-y-2 mb-4 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
+                    <p>• Aquesta no és una eina oficial i normalitzada.</p>
+                    <p>• És una eina prototip que està en procés de proves i es pot modificar.</p>
+                    <p>• Cal passar-la pels diferents filtres de valoració per aconseguir que arribi a ser oficial.</p>
+                    <p>• La intenció és valorar la opinió de les persones que la fan servir per decidir elevar-la a la superioritat com una eina pràctica i necessària que ens ajudaria molt en el dia a dia per treballar de forma efectiva i eficient.</p>
+                    <p className="mt-2 text-indigo-100/90 font-medium italic">
+                      • Només té l'objectiu de facilitar als agents de l'especialitat la seva feina administrativa, en els aspectes més repetitius i avorrits de la mateixa. Pretén aportar coneixements de la seva base de dades, que han de ser validats sempre per un humà. No la deixis treballar sola, no en sap més que tu: només et farà la feina bruta.
+                    </p>
+                  </div>
+                </section>
+
                 <section className="space-y-4">
                   <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
                      <ShieldCheck className="w-4 h-4" /> 1. Criteris d'Ús Professional (Facilitadors Trànsit)
@@ -507,7 +539,7 @@ export default function App() {
                      <Scale className="w-4 h-4" /> 2. Propietat Intel·lectual i © Copyright
                   </h3>
                   <p className="text-[13px] leading-relaxed font-medium">
-                     L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **© @5085 - Atenea Hub System**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
+                     L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **@5085**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
                   </p>
                 </section>
 
@@ -522,7 +554,7 @@ export default function App() {
 
                 <section className="space-y-4">
                   <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA (Gemini 2.0)
+                     <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA
                   </h3>
                   <p className="text-[13px] leading-relaxed bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl italic font-medium">
                      "L'usuari té l'obligació inexcusable de revisar tots els relats, càlculs i dades generades abans de la seva signatura oficial o tramesa. Els models de IA poden presentar errors puntuals basats en les dades d'entrada."
@@ -565,16 +597,16 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 font-sans text-white">
-        <div className="w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl relative overflow-hidden">
+      <div className="min-h-[100dvh] bg-[#0f172a] flex items-center justify-center p-4 font-sans text-white">
+        <div className="w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-6 lg:p-10 shadow-2xl relative overflow-hidden">
           {isTipValidated && (
             <div className="absolute top-0 right-0 p-4">
-              <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border border-emerald-500/20 animate-pulse">Agent Validat</div>
+              <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[11px] lg:text-[14px] font-black uppercase tracking-widest border border-emerald-500/20 animate-pulse">Agent Validat</div>
             </div>
           )}
 
           <div className="text-center mb-6 lg:mb-8">
-            <div className={`inline-flex items-center justify-center w-[270px] h-[360px] lg:w-[360px] lg:h-[480px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast relative`}>
+            <div className="flex items-center justify-center w-[260px] h-[350px] lg:w-[420px] lg:h-[560px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast relative">
               <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
               {/* Pilot blau Davanter (dreta, al costat de la roda far davanter) */}
               <div className="absolute w-[2.5%] h-[1.8%] bg-blue-400 rounded-full animate-police-strobe mix-blend-screen" style={{ top: '38.5%', right: '29.5%' }} />
@@ -587,7 +619,7 @@ export default function App() {
             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2 mb-3">Personal Autoritzat • UNITAT DE TRÀNSIT</p>
             <div className="flex items-center justify-center gap-2 opacity-50">
               <AgentBadge tip="@5085" className="text-[10px] px-1.5 py-0.5" /> 
-              <span className="text-slate-400 text-[8px] tracking-widest font-black uppercase">• Versió 2.50</span>
+              <span className="text-slate-400 text-[8px] tracking-widest font-black uppercase">• Versió 2.60</span>
             </div>
           </div>
 
@@ -671,8 +703,8 @@ export default function App() {
         </div>
 
         {showLegalModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
-            <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-2xl max-h-[90vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.2)] flex flex-col relative">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
+            <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-5xl max-h-[95vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.3)] flex flex-col relative">
               
               {/* CAPÇALERA DE SEGURETAT */}
               <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-indigo-950/30">
@@ -682,7 +714,7 @@ export default function App() {
                   </div>
                   <div>
                     <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Avís Legal i Propietat Intel·lectual</h2>
-                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085 - Atenea Hub System</p>
+                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085</p>
                   </div>
                 </div>
               </div>
@@ -690,6 +722,21 @@ export default function App() {
               {/* CONTINGUT JURÍDIC CLAU */}
               <div className="p-10 overflow-y-auto custom-scrollbar space-y-10 text-slate-300">
                 
+                <section className="space-y-4">
+                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+                     <Info className="w-4 h-4" /> 0. Objectiu del Sistema
+                  </h3>
+                  <div className="text-[12px] font-bold text-amber-500 space-y-2 mb-4 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
+                    <p>• Aquesta no és una eina oficial i normalitzada.</p>
+                    <p>• És una eina prototip que està en procés de proves i es pot modificar.</p>
+                    <p>• Cal passar-la pels diferents filtres de valoració per aconseguir que arribi a ser oficial.</p>
+                    <p>• La intenció és valorar la opinió de les persones que la fan servir per decidir elevar-la a la superioritat com una eina pràctica i necessària que ens ajudaria molt en el dia a dia per treballar de forma efectiva i eficient.</p>
+                    <p className="mt-2 text-indigo-100/90 font-medium italic">
+                      • Només té l'objectiu de facilitar als agents de l'especialitat la seva feina administrativa, en els aspectes més repetitius i avorrits de la mateixa. Pretén aportar coneixements de la seva base de dades, que han de ser validats sempre per un humà. No la deixis treballar sola, no en sap més que tu: només et farà la feina bruta.
+                    </p>
+                  </div>
+                </section>
+
                 <section className="space-y-4">
                   <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
                      <ShieldCheck className="w-4 h-4" /> 1. Criteris d'Ús Professional (Facilitadors Trànsit)
@@ -704,7 +751,7 @@ export default function App() {
                      <Scale className="w-4 h-4" /> 2. Propietat Intel·lectual i © Copyright
                   </h3>
                   <p className="text-[13px] leading-relaxed font-medium">
-                     L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **© @5085 - Atenea Hub System**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
+                     L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **@5085**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
                   </p>
                 </section>
 
@@ -719,7 +766,7 @@ export default function App() {
 
                 <section className="space-y-4">
                   <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA (Gemini 2.0)
+                     <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA
                   </h3>
                   <p className="text-[13px] leading-relaxed bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl italic font-medium">
                      "L'usuari té l'obligació inexcusable de revisar tots els relats, càlculs i dades generades abans de la seva signatura oficial o tramesa. Els models de IA poden presentar errors puntuals basats en les dades d'entrada."
@@ -761,7 +808,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen lg:h-screen bg-[#0a0f1a] text-slate-200 font-sans flex flex-col overflow-hidden relative">
-      <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+      {/* Escut gegant de fons amb difuminació/opacitat del 24% - NOMÉS EN EL HUB D'APPS I FIXE */}
+      {isAuthenticated && !showAdmin && !activeApp && (
+        <>
+          <div className="fixed inset-0 flex items-center justify-center pointer-events-none overflow-hidden z-0">
+            <img 
+              src="/escud-transit-v2.png" 
+              className="w-[110%] md:w-[95%] h-auto max-w-none opacity-[0.24] blur-[10px] saturate-[1.2] brightness-125" 
+              alt="Escut Background" 
+            />
+          </div>
+          <div className="fixed inset-0 opacity-[0.05] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+        </>
+      )}
 
       <header className="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 px-8 py-6 flex justify-between items-center shadow-2xl shrink-0">
         <div className="flex items-center gap-6">
@@ -772,7 +831,7 @@ export default function App() {
             <h1 className="text-3xl font-black text-white tracking-tighter uppercase">MOSSOS D'ESQUADRA</h1>
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[8px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.50</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.60</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -864,7 +923,8 @@ export default function App() {
               onToggleAppStatus={handleToggleAppStatus}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+            <div className="relative h-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10 relative z-10">
               {APP_LINKS.map((link, index) => {
                 const dynamicStatus = appStatuses[link.id] || link.status;
                 return (
@@ -877,11 +937,12 @@ export default function App() {
                 );
               })}
             </div>
+          </div>
           )}
         </div>
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 flex justify-center items-center px-10">
-        <p className="text-slate-600 text-[8px] font-black uppercase tracking-widest">v2.50 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.50 • AES-256 ENCRYPTION ACTIVE</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per Admins) */}
@@ -931,8 +992,8 @@ export default function App() {
       )}
 
       {showLegalModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
-          <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-2xl max-h-[90vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_50px_rgba(79,70,229,0.2)] flex flex-col relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
+          <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-5xl max-h-[95vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.3)] flex flex-col relative">
             
             {/* CAPÇALERA DE SEGURETAT */}
             <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-indigo-950/30">
@@ -942,7 +1003,7 @@ export default function App() {
                 </div>
                 <div>
                   <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Avís Legal i Propietat Intel·lectual</h2>
-                  <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085 - Atenea Hub System</p>
+                  <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085</p>
                 </div>
               </div>
             </div>
@@ -950,6 +1011,21 @@ export default function App() {
             {/* CONTINGUT JURÍDIC CLAU */}
             <div className="p-10 overflow-y-auto custom-scrollbar space-y-10 text-slate-300">
               
+              <section className="space-y-4">
+                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+                   <Info className="w-4 h-4" /> 0. Objectiu del Sistema
+                </h3>
+                <div className="text-[12px] font-bold text-amber-500 space-y-2 mb-4 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
+                  <p>• Aquesta no és una eina oficial i normalitzada.</p>
+                  <p>• És una eina prototip que està en procés de proves i es pot modificar.</p>
+                  <p>• Cal passar-la pels diferents filtres de valoració per aconseguir que arribi a ser oficial.</p>
+                  <p>• La intenció és valorar la opinió de les persones que la fan servir per decidir elevar-la a la superioritat com una eina pràctica i necessària que ens ajudaria molt en el dia a dia per treballar de forma efectiva i eficient.</p>
+                  <p className="mt-2 text-indigo-100/90 font-medium italic">
+                    • Només té l'objectiu de facilitar als agents de l'especialitat la seva feina administrativa, en els aspectes més repetitius i avorrits de la mateixa. Pretén aportar coneixements de la seva base de dades, que han de ser validats sempre per un humà. No la deixis treballar sola, no en sap més que tu: només et farà la feina bruta.
+                  </p>
+                </div>
+              </section>
+
               <section className="space-y-4">
                 <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
                    <ShieldCheck className="w-4 h-4" /> 1. Criteris d'Ús Professional (Facilitadors Trànsit)
@@ -964,7 +1040,7 @@ export default function App() {
                    <Scale className="w-4 h-4" /> 2. Propietat Intel·lectual i © Copyright
                 </h3>
                 <p className="text-[13px] leading-relaxed font-medium">
-                   L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **© @5085 - Atenea Hub System**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
+                   L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **@5085**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
                 </p>
               </section>
 
@@ -979,7 +1055,7 @@ export default function App() {
 
               <section className="space-y-4">
                 <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                   <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA (Gemini 2.0)
+                   <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA
                 </h3>
                 <p className="text-[13px] leading-relaxed bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl italic font-medium">
                    "L'usuari té l'obligació inexcusable de revisar tots els relats, càlculs i dades generades abans de la seva signatura oficial o tramesa. Els models de IA poden presentar errors puntuals basats en les dades d'entrada."
@@ -1036,7 +1112,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
     const combinedLogs = [...costLogs, ...rankLogs];
     
     combinedLogs.forEach(log => {
-      if (!log.tip || log.isAdmin) return;
+      if (!log.tip || log.tip.includes('5085') || log.isAdmin) return;
       if (!counts[log.tip]) {
         counts[log.tip] = { name: log.name, tip: log.tip, count: 0, totalCost: 0, appCounts: {} };
       }
@@ -1061,7 +1137,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
     const years: Record<string, { total: number, count: number, months: Record<string, { total: number, agents: Record<string, { name: string, cost: number, count: number }> }> }> = {};
 
     costLogs.forEach(log => {
-      if (!log.cost || !log.timestamp) return;
+      if (!log.cost || !log.timestamp || log.tip?.includes('5085')) return;
       const date = log.timestamp.toDate ? log.timestamp.toDate() : new Date(log.timestamp);
       const yearKey = date.getFullYear().toString();
       const monthKey = `${yearKey}-${String(date.getMonth() + 1).padStart(2, '0')}`;
@@ -1109,7 +1185,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
     const openSessions = new Map<string, any>(); // tip -> current active app session
 
     // Filter out admin logs and sort chronologically to process sequences
-    const sortedLogs = [...logs].filter(log => !log.isAdmin).sort((a, b) => {
+    const sortedLogs = [...logs].filter(log => !log.isAdmin && !log.tip?.includes('5085')).sort((a, b) => {
       const da = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
       const db = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
       return da.getTime() - db.getTime();
@@ -1219,7 +1295,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
           <div className="flex items-center gap-4">
             {activeTab === 'users' && (
               <>
-                <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-xl text-[9px] font-black uppercase hover:bg-emerald-500/20 transition-all active:scale-95">
+                <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-4 py-2 rounded-xl text-[12px] lg:text-[15px] font-black uppercase hover:bg-emerald-500/20 transition-all active:scale-95">
                   <UserPlus className="w-4 h-4" /> Nou Agent
                 </button>
                 <input type="text" placeholder="Cercar agent..." className="bg-white/5 border border-white/10 rounded-xl py-2 px-4 text-xs text-white outline-none focus:ring-1 focus:ring-amber-500 w-64" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -1249,16 +1325,16 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                       {log.totalCost > 0 && <span className="ml-2 text-emerald-500 bg-emerald-500/10 px-2 rounded">[{log.totalCost.toFixed(4)} €]</span>}
                     </p>
                     {log.details && log.details.length > 0 && (
-                      <p className="text-[7px] font-mono text-slate-400 mt-1 uppercase flex gap-2">
+                      <p className="text-[10px] lg:text-[13px] font-mono text-slate-400 mt-1 uppercase flex gap-2">
                         {log.details.map((d: any, idx: number) => <span key={idx} className="bg-black/40 px-1 border border-white/5 rounded">↳ {d}</span>)}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-mono text-slate-500">{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date(log.timestamp).toLocaleString()}</p>
+                  <p className="text-[12px] lg:text-[15px] font-mono text-slate-500">{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date(log.timestamp).toLocaleString()}</p>
                   {log.endTime && (
-                    <p className="text-[7px] font-mono text-slate-600 mt-1 uppercase">Sessió Finalitzada</p>
+                    <p className="text-[10px] lg:text-[13px] font-mono text-slate-600 mt-1 uppercase">Sessió Finalitzada</p>
                   )}
                 </div>
               </div>
@@ -1341,29 +1417,56 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
             </div>
           ) : activeTab === 'dictat' ? (
             <div className="space-y-4">
-              {dictatLogs.map((log) => (
-                <div key={log.id} className="p-5 bg-black/20 border border-white/5 rounded-2xl flex flex-col gap-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <AgentBadge tip={log.agentTip || '???'} />
-                      <span className="text-[16px] font-black text-amber-500">{log.nat || 'SENSE NAT'}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-black tracking-widest ${log.mode === 'TECNIC' ? 'bg-purple-500 text-white' : log.mode === 'SIMPLE' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'}`}>{log.mode}</span>
+                  {Array.isArray(dictatLogs) && dictatLogs.map((log) => {
+                    let agentName = '';
+                    const actualTip = log?.tip || log?.agent_tip || log?.agentTip || log?.id_agent || log?.agent_id || log?.usuari || log?.usuario || log?.user || log?.tip_agent_1 || log?.instructor || log?.idAgent || log?.agent || log?.userId || log?.user_id || log?.userName || log?.author || '';
+                    try {
+                      const sTip = String(actualTip || '').replace(/\D/g, '').replace(/^0+/, '');
+                      if (sTip) {
+                        const match = (users || []).find(u => {
+                          const uTip = String(u?.id || u?.tip || '').replace(/\D/g, '').replace(/^0+/, '');
+                          return uTip === sTip;
+                        });
+                        if (match) agentName = match.name || '';
+                      }
+                    } catch (e) {}
+
+                    let dateStr = 'Sense data';
+                    try {
+                      if (log?.timestamp?.toDate) dateStr = log.timestamp.toDate().toLocaleString();
+                      else if (log?.timestamp?.seconds) dateStr = new Date(log.timestamp.seconds * 1000).toLocaleString();
+                      else if (log?.timestamp) dateStr = new Date(log.timestamp).toLocaleString();
+                    } catch (e) {}
+
+                    return (
+                      <div key={log?.id || Math.random()} className="p-5 bg-black/20 border border-white/5 rounded-2xl flex flex-col gap-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-3">
+                            <AgentBadge tip={String(actualTip || '???')} />
+                             <div className="flex flex-col">
+                              <span className="text-[18px] lg:text-3xl font-black text-amber-500">{log?.nat || 'SENSE NAT'}</span>
+                              <span className="text-[12px] lg:text-[16px] font-bold text-slate-500 uppercase">
+                                {agentName ? `${agentName} • TIP: ${actualTip}` : `AGENTE TIP: ${actualTip && actualTip.toUpperCase() !== 'EXTERN' ? actualTip : 'SENSE REGISTRE'}`}
+                              </span>
+                            </div>
+                            <span className={`text-[10px] lg:text-xs px-2 py-0.5 rounded uppercase font-black tracking-widest ${log?.mode === 'TECNIC' ? 'bg-purple-500 text-white' : log?.mode === 'SIMPLE' ? 'bg-blue-500 text-white' : 'bg-emerald-500 text-white'}`}>{log?.mode || 'STDN'}</span>
+                          </div>
+                          <span className="text-[11px] lg:text-[13px] text-slate-500 font-mono font-black">{dateStr}</span>
+                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                      <div className="bg-white/5 border border-white/5 p-6 rounded-[2.5rem] flex flex-col h-full shadow-inner">
+                        <p className="text-[14px] lg:text-[18px] text-slate-500 uppercase tracking-[0.2em] font-black mb-4">Relat Capturat de l'Agent</p>
+                        <p className="text-lg lg:text-2xl text-slate-200 font-medium whitespace-pre-wrap leading-relaxed flex-1 italic opacity-90">{log?.input || ''}</p>
+                      </div>
+                      <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-[2.5rem] flex flex-col h-full shadow-xl">
+                        <p className="text-[14px] lg:text-[18px] text-blue-400 uppercase tracking-[0.2em] font-black mb-4">Informe Generat</p>
+                        <p className="text-lg lg:text-2xl text-blue-50 font-bold whitespace-pre-wrap leading-relaxed flex-1">{log?.report || ''}</p>
+                      </div>
                     </div>
-                    <span className="text-[10px] text-slate-500 font-mono font-black">{log.timestamp ? new Date(log.timestamp).toLocaleString() : 'Sense data'}</span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    <div className="bg-white/5 border border-white/5 p-5 rounded-2xl flex flex-col h-full">
-                      <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-3">Relat Capturat de l'Agent</p>
-                      <p className="text-sm text-slate-300 font-medium whitespace-pre-wrap leading-relaxed flex-1">{log.input}</p>
-                    </div>
-                    <div className="bg-blue-500/10 border border-blue-500/20 p-5 rounded-2xl flex flex-col h-full">
-                      <p className="text-[10px] text-blue-400 uppercase tracking-widest font-black mb-3">Informe Generat</p>
-                      <p className="text-sm text-blue-100 font-medium whitespace-pre-wrap leading-relaxed flex-1">{log.report}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {dictatLogs.length === 0 && <p className="text-center py-10 text-slate-500 text-[10px] uppercase font-black">No hi ha informes recents</p>}
+                );
+              })}
+              {(!dictatLogs || dictatLogs.length === 0) && <p className="text-center py-10 text-slate-500 text-[12px] lg:text-[16px] uppercase font-black">No hi ha informes recents</p>}
             </div>
           ) : activeTab === 'apps' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1378,17 +1481,17 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                           <Icon className="w-6 h-6" />
                         </div>
                         <div>
-                          <h4 className="text-[12px] font-black text-white uppercase leading-tight">{app.title}</h4>
-                          <span className="text-[8px] font-mono text-slate-500">{app.code}</span>
+                          <h4 className="text-[12px] lg:text-base font-black text-white uppercase leading-tight">{app.title}</h4>
+                          <span className="text-[10px] lg:text-xs font-mono text-slate-500">{app.code}</span>
                         </div>
                       </div>
-                      <span className={`text-[8px] px-2 py-0.5 rounded font-black uppercase ${status === 'online' ? 'bg-emerald-500 text-black' : 'bg-amber-500 text-black'}`}>
+                      <span className={`text-[9px] lg:text-xs px-2 py-0.5 rounded font-black uppercase ${status === 'online' ? 'bg-emerald-500 text-black' : 'bg-amber-500 text-black'}`}>
                         {status === 'online' ? 'ACTIVA' : 'OFFLINE'}
                       </span>
                     </div>
                     <button
                       onClick={() => onToggleAppStatus(app.id, status)}
-                      className={`w-full py-3 rounded-xl text-[10px] font-black uppercase flex items-center justify-center gap-2 transition-all active:scale-95 ${status === 'online' ? 'bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20'}`}
+                      className={`w-full py-3 rounded-xl text-[10px] lg:text-sm font-black uppercase flex items-center justify-center gap-2 transition-all active:scale-95 ${status === 'online' ? 'bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500/20' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20'}`}
                     >
                       {status === 'online' ? 'TURNOFF / MANTENIMENT' : 'ACTIVA L\'APP'}
                     </button>
@@ -1408,7 +1511,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                             type="text"
                             title="Editar nom de l'agent"
                             placeholder="Nom de l'agent"
-                            className="bg-black/40 border border-amber-500/50 rounded px-2 py-1 text-xs text-white uppercase outline-none w-full"
+                            className="bg-black/40 border border-amber-500/50 rounded px-2 py-1 text-sm text-white uppercase outline-none w-full"
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
                             autoFocus
@@ -1418,23 +1521,23 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                         </div>
                       ) : (
                         <div className="flex items-center gap-2 group/name">
-                          <h4 className={`text-sm font-black ${user.status === 'off' ? 'text-slate-500 line-through' : 'text-white'}`}>{user.name}</h4>
+                          <h4 className={`text-sm lg:text-base font-black ${user.status === 'off' ? 'text-slate-500 line-through' : 'text-white'}`}>{user.name}</h4>
                           <button title="Editar nom" onClick={() => { setEditingTip(user.tip); setEditingName(user.name); }} className="opacity-0 group-hover/name:opacity-100 p-1 text-slate-500 hover:text-amber-500 transition-all"><Edit2 className="w-3 h-3" /></button>
                         </div>
                       )}
                       <AgentBadge tip={user.tip} />
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className={`text-[7px] px-1.5 py-0.5 rounded font-black uppercase ${user.isAdmin ? 'bg-red-500' : user.status === 'off' ? 'bg-red-900 text-red-100' : user.firstLogin ? 'bg-amber-500 text-black' : 'bg-emerald-500'}`}>{user.isAdmin ? 'ADMIN' : user.status === 'off' ? 'BAIXA' : user.firstLogin ? 'Pendent' : 'Actiu'}</span>
+                      <span className={`text-[9px] lg:text-xs px-1.5 py-0.5 rounded font-black uppercase ${user.isAdmin ? 'bg-red-500' : user.status === 'off' ? 'bg-red-900 text-red-100' : user.firstLogin ? 'bg-amber-500 text-black' : 'bg-emerald-500'}`}>{user.isAdmin ? 'ADMIN' : user.status === 'off' ? 'BAIXA' : user.firstLogin ? 'Pendent' : 'Actiu'}</span>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     {!user.isAdmin && (
                       <>
-                        <button onClick={() => onResetPin(user.tip)} className="flex-1 bg-white/5 border border-white/10 py-2 rounded-xl text-[8px] font-black uppercase flex items-center justify-center gap-2 hover:bg-white/10 active:scale-95 transition-all"><RefreshCw className="w-3 h-3" /> Reset</button>
+                        <button onClick={() => onResetPin(user.tip)} className="flex-1 bg-white/5 border border-white/10 py-2 rounded-xl text-[10px] lg:text-xs font-black uppercase flex items-center justify-center gap-2 hover:bg-white/10 active:scale-95 transition-all"><RefreshCw className="w-3 h-3" /> Reset</button>
                         <button
                           onClick={() => onToggleStatus(user.tip, user.status || 'on')}
-                          className={`flex-1 border py-2 rounded-xl text-[8px] font-black uppercase flex items-center justify-center gap-2 active:scale-95 transition-all ${user.status === 'off' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20'}`}
+                          className={`flex-1 border py-2 rounded-xl text-[10px] lg:text-xs font-black uppercase flex items-center justify-center gap-2 active:scale-95 transition-all ${user.status === 'off' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20' : 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20'}`}
                         >
                           {user.status === 'off' ? 'DONAR D\'ALTA' : 'DONAR DE BAIXA'}
                         </button>
@@ -1453,7 +1556,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
 
 function AppCard({ link, index, onClick }: { link: AppLink, index: number, onClick: () => void, key?: string | number }) {
   const Icon = link.icon;
-  const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'gestor-casos' || link.id === 'minutes';
+  const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'gestor-casos' || link.id === 'minutes' || link.id === 'interpretador-veco'; // || link.id === 'informe-vector';
 
   return (
     <motion.button

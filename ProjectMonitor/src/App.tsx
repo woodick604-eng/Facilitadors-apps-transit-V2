@@ -38,7 +38,7 @@ const db = getFirestore(app);
 const APP_LINKS = [
   { id: 'dictat-accidents', title: 'Dictat d\'Accidents', desc: 'Eina de dictat per veu per a informes.', url: 'https://dictat-atenea-t06.web.app/', icon: Mic },
   { id: 'renombrador', title: 'Reanomenador Photos', desc: 'Reduir i organitzar fotografies de camp.', url: 'https://processador-imatges-accidents.web.app/', icon: Images },
-  { id: 'informe-atenea', title: 'Informe Atenea', desc: 'Informe fotogràfic per Jutjats.', url: 'https://infofoto-vector-art.web.app/', icon: FileText },
+  { id: 'informe-atenea', title: 'ATENEA i URIVI', desc: 'Informe fotogràfic per Jutjats (ATENEA i URIVI).', url: 'https://infofoto-vector-art.web.app/', icon: FileText },
   { id: 'informe-vector', title: 'Informe Vector', desc: 'Informe fotogràfic automàtic.', url: 'https://infofoto-urivi-3-service-177830712484.europe-west1.run.app/', icon: Camera },
   { id: 'simptomatologia', title: 'Simptomatologia', desc: 'Signes externs DGT compatibles.', url: 'https://simptomatologia.web.app/', icon: Search },
   { id: 'dictat-minutes', title: 'Dictat Minutes', desc: 'Diligència d\'Informe T-32 cronològic.', url: 'https://dictat-minutes.web.app/', icon: Clock }
