@@ -118,7 +118,7 @@ function App() {
     return (
       <div className="login-screen" style={{minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #020617 100%)', color: 'white', textAlign: 'center', padding: '2rem'}}>
         <div style={{width: '120px', height: '160px', marginBottom: '2rem', borderRadius: '1.5rem', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)'}}>
-          <img src="https://facilitadors-transit.web.app/escud-transit-v2.png" style={{width:'100%', height:'100%', objectFit:'cover'}} alt="Escut Mossos" />
+          <img src="https://facilitadors-transit.web.app/escud-transit-v2.png" style={{width:'100%', height:'100%', objectFit:'cover'}} alt="Escut Trànsit" />
         </div>
         <h1 style={{fontSize: '2rem', fontWeight: '900', letterSpacing: '-0.02em', marginBottom: '0.5rem'}}>ATENEA HUB MONITOR</h1>
         <p style={{color: 'rgba(255,255,255,0.5)', maxWidth: '400px', fontSize: '1rem', lineHeight: '1.6'}}>Esperant validació del Facilitador Principal...</p>

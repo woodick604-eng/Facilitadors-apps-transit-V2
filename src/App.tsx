@@ -828,7 +828,7 @@ export default function App() {
             <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">MOSSOS D'ESQUADRA</h1>
+
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
               <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.60</span>
