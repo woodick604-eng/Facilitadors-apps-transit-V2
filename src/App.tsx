@@ -1454,13 +1454,13 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                           <span className="text-[11px] lg:text-[13px] text-slate-500 font-mono font-black">{dateStr}</span>
                         </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                      <div className="bg-white/5 border border-white/5 p-6 rounded-[2.5rem] flex flex-col h-full shadow-inner">
-                        <p className="text-[14px] lg:text-[18px] text-slate-500 uppercase tracking-[0.2em] font-black mb-4">Relat Capturat de l'Agent</p>
-                        <p className="text-lg lg:text-2xl text-slate-200 font-medium whitespace-pre-wrap leading-relaxed flex-1 italic opacity-90">{log?.input || ''}</p>
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-[2rem] flex flex-col h-full shadow-inner">
+                        <p className="text-[10px] lg:text-[12px] text-slate-500 uppercase tracking-[0.2em] font-black mb-3">Relat Capturat de l'Agent</p>
+                        <p className="text-[12px] text-slate-200 font-medium whitespace-pre-wrap leading-relaxed flex-1 italic opacity-90 font-sans tracking-tight">{log?.input || ''}</p>
                       </div>
-                      <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-[2.5rem] flex flex-col h-full shadow-xl">
-                        <p className="text-[14px] lg:text-[18px] text-blue-400 uppercase tracking-[0.2em] font-black mb-4">Informe Generat</p>
-                        <p className="text-lg lg:text-2xl text-blue-50 font-bold whitespace-pre-wrap leading-relaxed flex-1">{log?.report || ''}</p>
+                      <div className="bg-blue-500/10 border border-blue-500/20 p-5 rounded-[2rem] flex flex-col h-full shadow-xl">
+                        <p className="text-[10px] lg:text-[12px] text-blue-400 uppercase tracking-[0.2em] font-black mb-3">Informe Generat</p>
+                        <p className="text-[12px] text-blue-50 font-medium whitespace-pre-wrap leading-relaxed flex-1 font-sans tracking-tight">{log?.report || ''}</p>
                       </div>
                     </div>
                   </div>
