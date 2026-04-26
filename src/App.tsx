@@ -50,12 +50,10 @@ export default function App() {
 
   useEffect(() => {
     // El disclaimer no ha de aparèixer automàticament al començar
-    /*
     const hasAccepted = localStorage.getItem('legal_accepted_v_global');
     if (!hasAccepted) {
       setShowLegalModal(true);
     }
-    */
   }, []);
 
   // Real-time validation states
@@ -893,7 +891,7 @@ export default function App() {
               title="Consultar Avís Legal i Seguretat"
             >
               <ShieldCheck className="w-6 h-6" /> 
-              <span className="hidden xl:block">AVÍS LEGAL</span>
+              <span>AVÍS LEGAL</span>
             </button>
             <button 
               onClick={() => { logActivity('Tancament de sessió'); setIsAuthenticated(false); setCurrentUser(null); setShowAdmin(false); setPin(''); setConfirmPin(''); }} 
