@@ -1,5 +1,5 @@
 {
-  "name": "Facilitador per patrulles i Atenea",
-  "description": "Plataforma centralitzada per a la gestió d'atenees i informes fotogràfics.",
+  "name": "Hub Facilitador de Trànsit — LA 0",
+  "description": "Plataforma central integradora de les 7 eines de suport a la funció policial de trànsit (LA 1–LA 7). Gestió d'usuaris, control d'accés per TIP+PIN i monitoratge d'estat.",
   "requestFramePermissions": []
 }

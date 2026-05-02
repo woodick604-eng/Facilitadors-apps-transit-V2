@@ -1,3 +1,4 @@
+// Copyright (c) 2026 @5085. Tots els drets reservats.
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ExternalLink,
@@ -30,6 +31,199 @@ import { APP_LINKS, AppLink } from './constants';
 import { db, dictatDb } from './firebase';
 import { doc, getDoc, updateDoc, setDoc, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, where } from 'firebase/firestore';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// LEGAL MODAL — Avís Legal, RGPD, IA i Responsabilitat
+// Definit com a component independent per reutilitzar-lo als 3 estats de l'app
+// ═══════════════════════════════════════════════════════════════════════════
+function LegalModalContent({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
+      <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-5xl max-h-[95vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.3)] flex flex-col relative">
+
+        {/* CAPÇALERA */}
+        <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-indigo-950/30">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20">
+              <ShieldCheck className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Avís Legal, Protecció de Dades i Responsabilitat</h2>
+              <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085 — Inscrita al Registre PI Catalunya · Exp. 00765-03123076 · Asiento REGAGE26e00041580644 (29/04/2026)</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-700 transition-all" title="Tancar avís legal">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* CONTINGUT JURÍDIC */}
+        <div className="p-8 md:p-10 overflow-y-auto custom-scrollbar space-y-8 text-slate-300">
+
+          {/* 0. NATURALESA I ESTAT DE L'EINA */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-3">
+              <Info className="w-4 h-4" /> 0. Naturalesa i Estat de l'Eina
+            </h3>
+            <div className="text-[12px] font-semibold text-amber-300 space-y-2 bg-amber-500/5 p-5 rounded-xl border border-amber-500/20">
+              <p>• <strong>Eina no oficial i no normalitzada.</strong> No ha estat aprovada, homologada ni avalada per cap organisme públic ni per la Direcció General de la Policia de la Generalitat.</p>
+              <p>• <strong>Prototype en proves.</strong> Pot ser modificada, interrompuda o retirada en qualsevol moment sense preavís.</p>
+              <p>• <strong>Les sortides de l'eina (narratives, càlculs, actes, informes) no tenen valor legal per si mateixes.</strong> Cap document generat per aquesta aplicació pot ser presentat com a document oficial sense la prèvia revisió, correcció i signatura manual per part de l'agent responsable.</p>
+              <p className="text-indigo-200/80 italic font-medium">• L'objectiu és reduir la càrrega administrativa repetitiva. Aporta coneixement de la seva base de dades, que <u>sempre ha de ser validat per un professional humà</u>. No la deixis treballar sola: la responsabilitat final és de l'agent signant.</p>
+            </div>
+          </section>
+
+          {/* 1. RESPONSABILITAT PROFESSIONAL */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <ShieldCheck className="w-4 h-4" /> 1. Responsabilitat Professional Individual de l'Agent
+            </h3>
+            <div className="text-[13px] leading-relaxed space-y-2">
+              <p>Aquesta aplicació ha estat dissenyada per a ús exclusiu de personal de les Forces i Cossos de Seguretat degudament autoritzat. L'ús implica l'acceptació de les condicions següents:</p>
+              <ul className="list-none space-y-1 pl-3 text-[12px]">
+                <li>→ <strong>Cada agent és individualment responsable</strong> de tots els documents que signi, independentment que el contingut hagi estat generat total o parcialment per aquesta eina.</li>
+                <li>→ <strong>Cap agent pot transferir la seva responsabilitat professional a aquesta aplicació.</strong> La IA és un ajudant, no un agent signant.</li>
+                <li>→ <strong>L'ús per part de companys (companies) és responsabilitat exclusiva de cada usuari.</strong> L'autor de l'eina no assumeix cap responsabilitat per l'ús que en facin tercers.</li>
+                <li>→ L'eina és de suport a la instrucció d'atestats i redacció d'actes. No substitueix el criteri professional ni la formació de l'agent.</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* 2. PROPIETAT INTEL·LECTUAL */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <Scale className="w-4 h-4" /> 2. Propietat Intel·lectual i © Copyright
+            </h3>
+            <p className="text-[13px] leading-relaxed">
+              L'arquitectura, algorismes, motors de generació i interfícies de totes les aplicacions d'aquest facilitador <strong>són propietat intel·lectual d'@5085</strong>, protegides pel Text Refós de la LPI (RDL 1/1996). Registre de la Propietat Intel·lectual de Catalunya (expedient 00765-03123076, asiento registral REGAGE26e00041580644, data 29/04/2026). Queden terminantment prohibits: la reproducció, distribució, comunicació pública, transformació, explotació comercial i l'enginyeria inversa, sense autorització expressa i per escrit de l'autor.
+            </p>
+          </section>
+
+          {/* 3. ADVERTÈNCIA RGPD — LA MÉS IMPORTANT */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-red-400 uppercase tracking-[0.15em] flex items-center gap-3">
+              <AlertCircle className="w-4 h-4" /> 3. ADVERTÈNCIA CRÍTICA — PROTECCIÓ DE DADES (RGPD / LOPDGDD)
+            </h3>
+            <div className="bg-red-500/10 border-2 border-red-500/30 p-6 rounded-2xl space-y-4 shadow-xl">
+              <p className="text-[12px] font-black text-red-100 uppercase tracking-tight">
+                QUEDA TERMINANTMENT PROHIBIT INTRODUIR DADES DE CARÀCTER PERSONAL EN AQUESTA APLICACIÓ.
+              </p>
+              <div className="text-[12px] text-red-200/90 space-y-2">
+                <p><strong>Constitueixen dades personals, entre d'altres:</strong> noms i cognoms, DNI / NIF / NIE / passaport, adreces postals, números de telèfon, correus electrònics, <strong>matrícules de vehicles</strong> (dada personal per STJUE C-582/14 i C-439/19), adreces IP, coordenades de geolocalització, dades biom&#232;triques (categoria especial — Art. 9 RGPD), dades de salut o estat psicofísic, dades relatives a condemnances penals o infraccions (Art. 10 RGPD), o qualsevol combinació de dades que permeti la identificació directa o indirecta d'una persona física.</p>
+                <p className="font-bold">Els camps han de ser omplerts exclusivament amb dades tècniques, codis interns de cas, referències numèriques o identificadors anonimitzats.</p>
+              </div>
+              <div className="border-t border-red-500/20 pt-3 text-[11px] text-red-300/80 space-y-1">
+                <p>⚖️ <strong>L'agent que introdueixi dades personals assumeix la condició de <em>responsable del tractament</em> (Art. 4.7 RGPD)</strong> i és personalment responsable davant l'Agència Espanyola de Protecció de Dades (AEPD) i, si s'escau, l'Autoritat Catalana de Protecció de Dades (APDCAT).</p>
+                <p>⚖️ L'autor d'aquesta eina (l'identificat a la secció 2) <strong>no és responsable del tractament de dades que l'usuari pugui introduir</strong>.</p>
+                <p>⚖️ Marc legal aplicable: Regl. (UE) 2016/679 (RGPD) · LO 3/2018 (LOPDGDD) · Directiva (UE) 2016/680 (tractament per forces de l'ordre).</p>
+              </div>
+            </div>
+          </section>
+
+          {/* 4. IA + EU AI ACT */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <Sparkles className="w-4 h-4" /> 4. Intel·ligència Artificial — Supervisió Humana Obligatòria
+            </h3>
+            <div className="text-[13px] leading-relaxed bg-indigo-500/5 border border-indigo-500/15 p-5 rounded-2xl space-y-2">
+              <p>Aquesta eina fa ús de models d'intel·ligència artificial generativa (Google Gemini). <strong>L'usuari té l'obligació inexcusable de revisar, verificar i validar totes les narratives, càlculs, classificacions i dades generades</strong> abans de qualsevol signatura oficial o tramesa administrativa.</p>
+              <p className="text-[12px] text-indigo-300/80">Reglament (UE) 2024/1689 (Llei d'IA de la UE — EU AI Act): els sistemes d'IA que presten suport a decisions en l'àmbit de les forces de l'ordre es classifiquen com a <strong>sistemes d'alt risc</strong> (Annex III). L'ús d'aquests sistemes requereix <strong>supervisió humana efectiva obligatòria</strong> (Art. 14 EU AI Act). Cap decisió o acte oficial pot fonamentar-se exclusivament en la sortida d'un sistema d'IA sense revisió humana.</p>
+              <p className="text-[12px] text-slate-400 italic">Els models de IA poden generar errors, al·lucinacions o imprecisions. La qualitat de la sortida depèn directament de les dades d'entrada proporcionades per l'usuari.</p>
+            </div>
+          </section>
+
+          {/* 5. LIMITACIÓ RESPONSABILITAT AUTOR */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <Scale className="w-4 h-4" /> 5. Limitació de Responsabilitat de l'Autor
+            </h3>
+            <div className="text-[12px] leading-relaxed text-slate-400 space-y-2 bg-slate-800/30 p-5 rounded-xl border border-slate-700/30">
+              <p>Aquesta aplicació es proporciona <em>"tal com és"</em> (as-is), sense cap garantia expressa ni implícita de precisió, idoneïtat per a cap finalitat específica ni continuïtat del servei.</p>
+              <p><strong>L'autor (@5085) declina expressament tota responsabilitat</strong> per: (a) decisions professionals adoptades sobre la base dels resultats d'aquesta eina; (b) errors, omissions o imprecisions en les sortides generades per la IA; (c) dades de caràcter personal que l'usuari pugui introduir incomplint la prohibició establerta a la secció 3; (d) interrupcions del servei per causes de manteniment, actualitzacions o forces majors; (e) qualsevol dany directe, indirecte, especial o conseqüent derivat de l'ús o la impossibilitat d'ús d'aquesta eina.</p>
+              <p>L'autor no és part de cap relació laboral, jeràrquica ni de responsabilitat amb els agents que l'utilitzen. L'ús d'aquesta eina és voluntari i professional.</p>
+            </div>
+          </section>
+
+          {/* 6. TRACTAMENT DE DADES / SUBPROCESSADORS */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <KeyRound className="w-4 h-4" /> 6. Tractament de Dades Tècniques i Subprocessadors
+            </h3>
+            <div className="text-[12px] leading-relaxed space-y-2">
+              <p><strong>Política de retenció zero:</strong> aquesta eina no emmagatzema dades d'usuari al servidor de l'autor. L'arquitectura segueix els principis de <em>Privacitat per Disseny i per Defecte</em> (Art. 25 RGPD).</p>
+              <p><strong>Subprocessadors de tercers (UE/GDPR):</strong></p>
+              <ul className="list-none pl-3 space-y-1 text-slate-400">
+                <li>→ <strong>Google Firebase / Firestore</strong> (infraestructura UE — europe-west1): emmagatzema exclusivament configuració tècnica i dades de sessió anonimitzades. Cobert pel Google Cloud DPA (GDPR mode).</li>
+                <li>→ <strong>Google Gemini API</strong>: processa les consultes en trànsit. Per contracte, Google no utilitza les dades enviades a l'API per entrenar models. No es registren peticions (logging desactivat).</li>
+              </ul>
+              <p className="text-slate-500 text-[11px]">Per a consultes sobre protecció de dades: <span className="text-indigo-400">aadsuarg@gmail.com</span>. AEPD: www.aepd.es · APDCAT: apdcat.cat</p>
+            </div>
+          </section>
+
+          {/* 7. SEGURETAT DE CREDENCIALS */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <KeyRound className="w-4 h-4" /> 7. Seguretat de Credencials i Accés
+            </h3>
+            <p className="text-[13px] leading-relaxed italic text-slate-400">
+              L'usuari és el responsable exclusiu de protegir les seves claus d'accés, PIN i credencials. Queda expressament prohibit compartir-les amb tercers. L'incompliment pot comportar la revocació immediata de l'accés i, si hi ha accés no autoritzat a dades, l'aplicació de les responsabilitats establertes al RGPD i a la LOPDGDD.
+            </p>
+          </section>
+
+          {/* 8. ACCEPTACIÓ I REGISTRE */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <Check className="w-4 h-4" /> 8. Acceptació i Registre
+            </h3>
+            <div className="text-[12px] leading-relaxed text-slate-400 space-y-2 bg-slate-800/30 p-5 rounded-xl border border-slate-700/30">
+              <p>L'ús continuat d'aquesta eina <strong>implica l'acceptació íntegra i sense reserves</strong> de totes les clàusules contingudes en aquest avís legal.</p>
+              <p>En clicar el botó <em>"He llegit l'avís legal — Tancar"</em>, l'usuari manifesta haver llegit, comprès i acceptat aquests termes. L'autor podrà <strong>registrar de manera traçable</strong> aquesta acceptació (TIP de l'agent, marca temporal i versió del document) com a prova davant qualsevol controvèrsia futura.</p>
+              <p>L'autor pot publicar versions noves d'aquest avís legal en qualsevol moment. Els canvis substancials requeriran una nova acceptació explícita per part de l'usuari abans de continuar utilitzant l'eina.</p>
+            </div>
+          </section>
+
+          {/* 9. REVOCACIÓ I DIVISIBILITAT */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <ShieldCheck className="w-4 h-4" /> 9. Revocació i Divisibilitat
+            </h3>
+            <div className="text-[12px] leading-relaxed text-slate-400 space-y-2">
+              <p><strong>Revocació d'accés:</strong> l'autor es reserva el dret de revocar, suspendre o restringir l'accés de qualsevol usuari a aquesta eina, en qualsevol moment, sense necessitat de preavís ni de motivació, especialment davant qualsevol indici d'incompliment d'aquest avís legal.</p>
+              <p><strong>Divisibilitat (severability):</strong> si qualsevol clàusula d'aquest avís fos declarada nul·la, contrària a dret o no executable per qualsevol autoritat competent, la resta de clàusules <strong>conservaran la seva validesa i eficàcia íntegres</strong>. Les parts s'esforçaran a substituir la clàusula afectada per una altra que mantingui, en la mesura legalment possible, la mateixa finalitat econòmica i jurídica.</p>
+              <p><strong>Renúncia:</strong> el fet que l'autor no exerceixi en un moment determinat algun dels drets que li reconeix aquest avís no podrà interpretar-se en cap cas com a renúncia a aquest dret en el futur.</p>
+            </div>
+          </section>
+
+          {/* 10. LLEI APLICABLE I JURISDICCIÓ */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
+              <Scale className="w-4 h-4" /> 10. Llei Aplicable i Jurisdicció
+            </h3>
+            <div className="text-[12px] leading-relaxed text-slate-400 space-y-2">
+              <p>Aquest avís legal i la relació entre l'autor i l'usuari es regiran per la <strong>llei espanyola</strong>, complementada per la normativa europea aplicable (Reglament General de Protecció de Dades, EU AI Act).</p>
+              <p>Per a la resolució de qualsevol controvèrsia derivada de l'ús d'aquesta eina, les parts se sotmeten expressament a la <strong>jurisdicció dels Jutjats i Tribunals de Catalunya</strong> (preferentment, partits judicials de Barcelona o Granollers segons correspongui), amb renúncia a qualsevol altre fur que els pogués correspondre.</p>
+            </div>
+          </section>
+
+          <div className="pt-6 border-t border-slate-800 flex items-center justify-between">
+            <p className="text-[10px] font-mono text-slate-600 uppercase tracking-[0.3em]">RGPD · LOPDGDD · EU AI Act (UE) 2024/1689 · LPI RDL 1/1996</p>
+            <p className="text-[10px] font-mono text-slate-600 uppercase tracking-[0.3em]">v4.0.0</p>
+          </div>
+        </div>
+
+        {/* FOOTER */}
+        <div className="p-6 bg-slate-950/50 border-t border-slate-800 flex justify-center">
+          <button
+            onClick={onClose}
+            className="w-full md:w-auto px-12 py-4 bg-gradient-to-r from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(79,70,229,0.3)] transition-all border border-indigo-400/30 active:scale-95"
+          >
+            He llegit l'avís legal — Tancar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [tipInput, setTipInput] = useState('');
@@ -55,6 +249,28 @@ export default function App() {
       setShowLegalModal(true);
     }
   }, []);
+
+  // Registra de manera traçable l'acceptació de l'avís legal (per a defensa jurídica futura).
+  // Es desa a localStorage sempre, i si l'usuari està autenticat es logueja també a Firestore.
+  const acceptLegal = () => {
+    const LEGAL_VERSION = 'v4.0.0';
+    localStorage.setItem('legal_accepted_v_global', 'true');
+    localStorage.setItem('legal_accepted_version', LEGAL_VERSION);
+    localStorage.setItem('legal_accepted_at', new Date().toISOString());
+    setShowLegalModal(false);
+    // Best-effort: si tenim TIP autenticat, escrivim un registre traçable a Firestore.
+    if (currentUser?.tip) {
+      try {
+        addDoc(collection(db, 'legal_acceptances'), {
+          tip: currentUser.tip,
+          name: currentUser.name || null,
+          version: LEGAL_VERSION,
+          timestamp: serverTimestamp(),
+          userAgent: (navigator.userAgent || '').substring(0, 200),
+        }).catch(() => { /* sense bloquejar UX */ });
+      } catch (_) { /* idem */ }
+    }
+  };
 
   // Real-time validation states
   const [isTipValidated, setIsTipValidated] = useState(false);
@@ -489,104 +705,7 @@ export default function App() {
         </div>
 
         {showLegalModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
-            <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-5xl max-h-[95vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.3)] flex flex-col relative">
-              
-              {/* CAPÇALERA DE SEGURETAT */}
-              <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-indigo-950/30">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20">
-                     <ShieldCheck className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Avís Legal i Propietat Intel·lectual</h2>
-                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* CONTINGUT JURÍDIC CLAU */}
-              <div className="p-10 overflow-y-auto custom-scrollbar space-y-10 text-slate-300">
-                
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Info className="w-4 h-4" /> 0. Objectiu del Sistema
-                  </h3>
-                  <div className="text-[12px] font-bold text-amber-500 space-y-2 mb-4 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
-                    <p>• Aquesta no és una eina oficial i normalitzada.</p>
-                    <p>• És una eina prototip que està en procés de proves i es pot modificar.</p>
-                    <p>• Cal passar-la pels diferents filtres de valoració per aconseguir que arribi a ser oficial.</p>
-                    <p>• La intenció és valorar la opinió de les persones que la fan servir per decidir elevar-la a la superioritat com una eina pràctica i necessària que ens ajudaria molt en el dia a dia per treballar de forma efectiva i eficient.</p>
-                    <p className="mt-2 text-indigo-100/90 font-medium italic">
-                      • Només té l'objectiu de facilitar als agents de l'especialitat la seva feina administrativa, en els aspectes més repetitius i avorrits de la mateixa. Pretén aportar coneixements de la seva base de dades, que han de ser validats sempre per un humà. No la deixis treballar sola, no en sap més que tu: només et farà la feina bruta.
-                    </p>
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <ShieldCheck className="w-4 h-4" /> 1. Criteris d'Ús Professional (Facilitadors Trànsit)
-                  </h3>
-                  <p className="text-[13px] leading-relaxed font-medium">
-                     Aquesta aplicació ha estat dissenyada per a ús exclusiu de les Forces i Cossos de Seguretat. Les narratives, càlculs i automatitzacions proporcionades són una **eina de suport** i no substitueixen la responsabilitat de l'agent instructor en la formalització del document oficial.
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Scale className="w-4 h-4" /> 2. Propietat Intel·lectual i © Copyright
-                  </h3>
-                  <p className="text-[13px] leading-relaxed font-medium">
-                     L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **@5085**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-red-500 uppercase tracking-[0.15em] flex items-center gap-3">
-                     <AlertCircle className="w-4 h-4" /> 3. ADVERTÈNCIA PROTECCIÓ DE DADES (RGPD)
-                  </h3>
-                  <p className="text-[12px] font-black leading-relaxed bg-red-500/10 border-2 border-red-500/20 p-8 rounded-[2rem] text-red-100 uppercase tracking-tighter shadow-xl">
-                     "PER SEGURETAT JURÍDICA I COMPLIMENT DEL RGPD, QUEDA TERMINANTMENT PROHIBIT INTRODUIR DADES DE CARÀCTER PERSONAL (NOMS, COGNOMS, DNI O CONTACTE) DINS DE L'APLICATIU. ELS CAMPS HAN DE SER OMPLERTS NOMÉS AMB DADES TÈCNIQUES I PROFESSIONALS."
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA
-                  </h3>
-                  <p className="text-[13px] leading-relaxed bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl italic font-medium">
-                     "L'usuari té l'obligació inexcusable de revisar tots els relats, càlculs i dades generades abans de la seva signatura oficial o tramesa. Els models de IA poden presentar errors puntuals basats en les dades d'entrada."
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <KeyRound className="w-4 h-4" /> 5. Seguretat de Credencials
-                  </h3>
-                  <p className="text-[13px] leading-relaxed font-medium italic">
-                     "L'usuari és el responsable exclusiu de protegir les seves claus d'accés i no facilitar-les a tercers. L'incompliment d'aquesta norma de seguretat pot comportar la revocació immediata de l'accés al sistema."
-                  </p>
-                </section>
-
-                <div className="pt-8 border-t border-slate-800 text-center">
-                  <p className="text-[11px] font-mono text-slate-600 uppercase tracking-[0.4em]">v3.47.8-SYSTEM-LOG-AUTH-OK</p>
-                </div>
-              </div>
-
-              {/* FOOTER D'ACCEPTACIÓ */}
-              <div className="p-8 bg-slate-950/50 border-t border-slate-800 flex justify-center">
-                <button 
-                  onClick={() => {
-                    localStorage.setItem('legal_accepted_v_global', 'true');
-                    setShowLegalModal(false);
-                  }}
-                  className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(79,70,229,0.3)] transition-all border border-indigo-400/30 active:scale-95"
-                >
-                  Accepto els termes i condicions de seguretat
-                </button>
-              </div>
-            </div>
-          </div>
+          <LegalModalContent onClose={acceptLegal} />
         )}
       </div>
     );
@@ -701,104 +820,7 @@ export default function App() {
         </div>
 
         {showLegalModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
-            <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-5xl max-h-[95vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.3)] flex flex-col relative">
-              
-              {/* CAPÇALERA DE SEGURETAT */}
-              <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-indigo-950/30">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20">
-                     <ShieldCheck className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Avís Legal i Propietat Intel·lectual</h2>
-                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085</p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* CONTINGUT JURÍDIC CLAU */}
-              <div className="p-10 overflow-y-auto custom-scrollbar space-y-10 text-slate-300">
-                
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Info className="w-4 h-4" /> 0. Objectiu del Sistema
-                  </h3>
-                  <div className="text-[12px] font-bold text-amber-500 space-y-2 mb-4 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
-                    <p>• Aquesta no és una eina oficial i normalitzada.</p>
-                    <p>• És una eina prototip que està en procés de proves i es pot modificar.</p>
-                    <p>• Cal passar-la pels diferents filtres de valoració per aconseguir que arribi a ser oficial.</p>
-                    <p>• La intenció és valorar la opinió de les persones que la fan servir per decidir elevar-la a la superioritat com una eina pràctica i necessària que ens ajudaria molt en el dia a dia per treballar de forma efectiva i eficient.</p>
-                    <p className="mt-2 text-indigo-100/90 font-medium italic">
-                      • Només té l'objectiu de facilitar als agents de l'especialitat la seva feina administrativa, en els aspectes més repetitius i avorrits de la mateixa. Pretén aportar coneixements de la seva base de dades, que han de ser validats sempre per un humà. No la deixis treballar sola, no en sap més que tu: només et farà la feina bruta.
-                    </p>
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <ShieldCheck className="w-4 h-4" /> 1. Criteris d'Ús Professional (Facilitadors Trànsit)
-                  </h3>
-                  <p className="text-[13px] leading-relaxed font-medium">
-                     Aquesta aplicació ha estat dissenyada per a ús exclusiu de les Forces i Cossos de Seguretat. Les narratives, càlculs i automatitzacions proporcionades són una **eina de suport** i no substitueixen la responsabilitat de l'agent instructor en la formalització del document oficial.
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Scale className="w-4 h-4" /> 2. Propietat Intel·lectual i © Copyright
-                  </h3>
-                  <p className="text-[13px] leading-relaxed font-medium">
-                     L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **@5085**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-red-500 uppercase tracking-[0.15em] flex items-center gap-3">
-                     <AlertCircle className="w-4 h-4" /> 3. ADVERTÈNCIA PROTECCIÓ DE DADES (RGPD)
-                  </h3>
-                  <p className="text-[12px] font-black leading-relaxed bg-red-500/10 border-2 border-red-500/20 p-8 rounded-[2rem] text-red-100 uppercase tracking-tighter shadow-xl">
-                     "PER SEGURETAT JURÍDICA I COMPLIMENT DEL RGPD, QUEDA TERMINANTMENT PROHIBIT INTRODUIR DADES DE CARÀCTER PERSONAL (NOMS, COGNOMS, DNI O CONTACTE) DINS DE L'APLICATIU. ELS CAMPS HAN DE SER OMPLERTS NOMÉS AMB DADES TÈCNIQUES I PROFESSIONALS."
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA
-                  </h3>
-                  <p className="text-[13px] leading-relaxed bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl italic font-medium">
-                     "L'usuari té l'obligació inexcusable de revisar tots els relats, càlculs i dades generades abans de la seva signatura oficial o tramesa. Els models de IA poden presentar errors puntuals basats en les dades d'entrada."
-                  </p>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                     <KeyRound className="w-4 h-4" /> 5. Seguretat de Credencials
-                  </h3>
-                  <p className="text-[13px] leading-relaxed font-medium italic">
-                     "L'usuari és el responsable exclusiu de protegir les seves claus d'accés i no facilitar-les a tercers. L'incompliment d'aquesta norma de seguretat pot comportar la revocació immediata de l'accés al sistema."
-                  </p>
-                </section>
-
-                <div className="pt-8 border-t border-slate-800 text-center">
-                  <p className="text-[11px] font-mono text-slate-600 uppercase tracking-[0.4em]">v3.47.8-SYSTEM-LOG-AUTH-OK</p>
-                </div>
-              </div>
-
-              {/* FOOTER D'ACCEPTACIÓ */}
-              <div className="p-8 bg-slate-950/50 border-t border-slate-800 flex justify-center">
-                <button 
-                  onClick={() => {
-                    localStorage.setItem('legal_accepted_v_global', 'true');
-                    setShowLegalModal(false);
-                  }}
-                  className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(79,70,229,0.3)] transition-all border border-indigo-400/30 active:scale-95"
-                >
-                  Accepto els termes i condicions de seguretat
-                </button>
-              </div>
-            </div>
-          </div>
+          <LegalModalContent onClose={acceptLegal} />
         )}
       </div>
     );
@@ -923,14 +945,21 @@ export default function App() {
           ) : (
             <div className="relative h-full">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10 relative z-10">
-              {APP_LINKS.map((link, index) => {
+              {APP_LINKS
+                .filter(link => {
+                  // Apps adminOnly: NOMÉS visibles per al TIP 5085 (no per a qualsevol admin)
+                  if (!link.adminOnly) return true;
+                  const tip = (currentUser?.tip || '').replace(/[^0-9]/g, '');
+                  return tip === '5085';
+                })
+                .map((link, index) => {
                 const dynamicStatus = appStatuses[link.id] || link.status;
                 return (
-                  <AppCard 
-                    key={link.id} 
-                    link={{ ...link, status: dynamicStatus as any }} 
-                    index={index} 
-                    onClick={() => { logActivity('Obertura App', { app: link.title }); setActiveApp({ ...link, status: dynamicStatus as any }); }} 
+                  <AppCard
+                    key={link.id}
+                    link={{ ...link, status: dynamicStatus as any }}
+                    index={index}
+                    onClick={() => { logActivity('Obertura App', { app: link.title }); setActiveApp({ ...link, status: dynamicStatus as any }); }}
                   />
                 );
               })}
@@ -990,104 +1019,7 @@ export default function App() {
       )}
 
       {showLegalModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 bg-black/85 backdrop-blur-md animate-in fade-in duration-500">
-          <div className="bg-[#0b1624] border-2 border-slate-800 w-full max-w-5xl max-h-[95vh] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(79,70,229,0.3)] flex flex-col relative">
-            
-            {/* CAPÇALERA DE SEGURETAT */}
-            <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-indigo-950/30">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/20">
-                   <ShieldCheck className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-sm font-black uppercase tracking-[0.2em] text-white">Avís Legal i Propietat Intel·lectual</h2>
-                  <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-1">© @5085</p>
-                </div>
-              </div>
-            </div>
-            
-            {/* CONTINGUT JURÍDIC CLAU */}
-            <div className="p-10 overflow-y-auto custom-scrollbar space-y-10 text-slate-300">
-              
-              <section className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                   <Info className="w-4 h-4" /> 0. Objectiu del Sistema
-                </h3>
-                <div className="text-[12px] font-bold text-amber-500 space-y-2 mb-4 bg-amber-500/5 p-4 rounded-xl border border-amber-500/20">
-                  <p>• Aquesta no és una eina oficial i normalitzada.</p>
-                  <p>• És una eina prototip que està en procés de proves i es pot modificar.</p>
-                  <p>• Cal passar-la pels diferents filtres de valoració per aconseguir que arribi a ser oficial.</p>
-                  <p>• La intenció és valorar la opinió de les persones que la fan servir per decidir elevar-la a la superioritat com una eina pràctica i necessària que ens ajudaria molt en el dia a dia per treballar de forma efectiva i eficient.</p>
-                  <p className="mt-2 text-indigo-100/90 font-medium italic">
-                    • Només té l'objectiu de facilitar als agents de l'especialitat la seva feina administrativa, en els aspectes més repetitius i avorrits de la mateixa. Pretén aportar coneixements de la seva base de dades, que han de ser validats sempre per un humà. No la deixis treballar sola, no en sap més que tu: només et farà la feina bruta.
-                  </p>
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                   <ShieldCheck className="w-4 h-4" /> 1. Criteris d'Ús Professional (Facilitadors Trànsit)
-                </h3>
-                <p className="text-[13px] leading-relaxed font-medium">
-                   Aquesta aplicació ha estat dissenyada per a ús exclusiu de l'usuari autoritzat. Les narratives, càlculs i automatitzacions proporcionades són una **eina de suport** i no substitueixen la responsabilitat de l'agent instructor en la formalització del document oficial.
-                </p>
-              </section>
-
-              <section className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                   <Scale className="w-4 h-4" /> 2. Propietat Intel·lectual i © Copyright
-                </h3>
-                <p className="text-[13px] leading-relaxed font-medium">
-                   L'arquitectura de programari, els algoritmes lògics i els motors de generació de continguts digitals **de totes les apps contingudes en aquest facilitador** són propietat intel·lectual protegida de **@5085**. Queda prohibida la reproducció, explotació comercial o qualsevol forma d'enginyeria inversa sense autorització expressa.
-                </p>
-              </section>
-
-              <section className="space-y-4">
-                <h3 className="text-xs font-black text-red-500 uppercase tracking-[0.15em] flex items-center gap-3">
-                   <AlertCircle className="w-4 h-4" /> 3. ADVERTÈNCIA PROTECCIÓ DE DADES (RGPD)
-                </h3>
-                <p className="text-[12px] font-black leading-relaxed bg-red-500/10 border-2 border-red-500/20 p-8 rounded-[2rem] text-red-100 uppercase tracking-tighter shadow-xl">
-                   "PER SEGURETAT JURÍDICA I COMPLIMENT DEL RGPD, QUEDA TERMINANTMENT PROHIBIT INTRODUIR DADES DE CARÀCTER PERSONAL (NOMS, COGNOMS, DNI O CONTACTE) DINS DE L'APLICATIU. ELS CAMPS HAN DE SER OMPLERTS NOMÉS AMB DADES TÈCNIQUES I PROFESSIONALS."
-                </p>
-              </section>
-
-              <section className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                   <Sparkles className="w-4 h-4" /> 4. Disclaimer de IA
-                </h3>
-                <p className="text-[13px] leading-relaxed bg-indigo-500/5 border border-indigo-500/10 p-5 rounded-2xl italic font-medium">
-                   "L'usuari té l'obligació inexcusable de revisar tots els relats, càlculs i dades generades abans de la seva signatura oficial o tramesa. Els models de IA poden presentar errors puntuals basats en les dades d'entrada."
-                </p>
-              </section>
-
-              <section className="space-y-4">
-                <h3 className="text-xs font-black text-indigo-400 uppercase tracking-widest flex items-center gap-3">
-                   <KeyRound className="w-4 h-4" /> 5. Seguretat de Credencials
-                </h3>
-                <p className="text-[13px] leading-relaxed font-medium italic">
-                   "L'usuari és el responsable exclusiu de protegir les seves claus d'accés i no facilitar-les a tercers. L'incompliment d'aquesta norma de seguretat pot comportar la revocació immediata de l'accés al sistema."
-                </p>
-              </section>
-
-              <div className="pt-8 border-t border-slate-800 text-center">
-                <p className="text-[11px] font-mono text-slate-600 uppercase tracking-[0.4em]">v3.47.8-SYSTEM-LOG-AUTH-OK</p>
-              </div>
-            </div>
-
-            {/* FOOTER D'ACCEPTACIÓ */}
-            <div className="p-8 bg-slate-950/50 border-t border-slate-800 flex justify-center">
-              <button 
-                onClick={() => {
-                  localStorage.setItem('legal_accepted_v_global', 'true');
-                  setShowLegalModal(false);
-                }}
-                className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-[0.2em] shadow-[0_10px_30px_rgba(79,70,229,0.3)] transition-all border border-indigo-400/30 active:scale-95"
-              >
-                Accepto els termes i condicions de seguretat
-              </button>
-            </div>
-          </div>
-        </div>
+        <LegalModalContent onClose={() => { localStorage.setItem('legal_accepted_v_global', 'true'); setShowLegalModal(false); }} />
       )}
     </div>
   );
@@ -1554,7 +1486,8 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
 
 function AppCard({ link, index, onClick }: { link: AppLink, index: number, onClick: () => void, key?: string | number }) {
   const Icon = link.icon;
-  const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'gestor-casos' || link.id === 'minutes' || link.id === 'interpretador-veco'; // || link.id === 'informe-vector';
+  // Apps visibles al mòbil: LA 1, LA 4, LA 5, LA 6, LA 7, LA 8, LA 19 (la resta només al desktop)
+  const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'informe-vector' || link.id === 'gestor-casos' || link.id === 'minutes' || link.id === 'interpretador-veco' || link.id === 'a76-penal-administrativa' || link.id === 'la19-backup-admin';
 
   return (
     <motion.button
@@ -1573,7 +1506,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
         </div>
       )}
       <div className={`flex justify-between items-start z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-        <div className={`w-14 h-14 lg:w-18 lg:h-18 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-7 h-7 lg:w-9 lg:h-9" /></div>
+        <div className={`w-14 h-14 lg:w-18 lg:h-18 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : link.category === 'admin' ? 'bg-amber-600/20 text-amber-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-7 h-7 lg:w-9 lg:h-9" /></div>
         <span className="text-[8px] lg:text-xs font-mono text-slate-600">{link.code}</span>
       </div>
       <div className={`mt-6 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}><h3 className="text-xl lg:text-2xl font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-2 lg:mb-3 whitespace-pre-line">{link.title}</h3><p className="text-slate-400 text-xs lg:text-sm font-medium lg:leading-relaxed line-clamp-3">{link.description}</p></div>

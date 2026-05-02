@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Col·lecció d'usuaris (agents): lectura i escriptura per autenticació TIP+PIN
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Registre d'accions (logs): escriptura lliure, lectura lliure (sense dades personals)
+    match /logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Estat de les aplicacions: lectura lliure, escriptura lliure
+    match /app_status/{appId} {
+      allow read, write: if true;
+    }
+
+    // Bloquejar qualsevol altra col·lecció no declarada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

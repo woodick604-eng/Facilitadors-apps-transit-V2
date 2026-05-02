@@ -5,7 +5,9 @@ import {
   FileImage,
   FolderSearch,
   FileAudio,
-  Monitor
+  Monitor,
+  Scale,
+  Database
 } from 'lucide-react';
 
 export const MOSSOS_THEME = {
@@ -22,10 +24,11 @@ export interface AppLink {
   description: string;
   url: string;
   icon: any;
-  category: 'dictat' | 'imatges' | 'gestio';
+  category: 'dictat' | 'imatges' | 'gestio' | 'admin';
   status: 'online' | 'offline' | 'maintenance';
   code: string;
   maintenanceMsg?: string;
+  adminOnly?: boolean; // Si true, només es mostra a usuaris amb isAdmin
 }
 
 export const APP_LINKS: AppLink[] = [
@@ -99,5 +102,26 @@ export const APP_LINKS: AppLink[] = [
     status: 'maintenance',
     code: 'VECO-07',
     maintenanceMsg: 'Aquesta eina està actualment en fase de construcció.'
+  },
+  {
+    id: 'a76-penal-administrativa',
+    title: '8. A-76 Penal o Administrativa',
+    description: 'Diagrama de flux interactiu de 5 passos per qualificar com a penal o administrativa una conducta de drogues al volant.',
+    url: 'https://a76-qualificacio.web.app/',
+    icon: Scale,
+    category: 'gestio',
+    status: 'online',
+    code: 'PEN-08'
+  },
+  {
+    id: 'la19-backup-admin',
+    title: '19. Backup Intel·ligent (ADMIN)',
+    description: 'Snapshots automàtics i restauració selectiva del Firestore (RAG + minutes). Eina exclusiva de manteniment per a @5085.',
+    url: 'https://la19-backup-admin.web.app/',
+    icon: Database,
+    category: 'admin',
+    status: 'online',
+    code: 'ADM-19',
+    adminOnly: true
   }
 ];
