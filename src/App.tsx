@@ -971,7 +971,7 @@ export default function App() {
         </div>
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 flex justify-center items-center px-10">
-        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.55 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.56 • AES-256 ENCRYPTION ACTIVE</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per Admins) */}
