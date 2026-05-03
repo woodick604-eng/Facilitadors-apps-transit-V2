@@ -929,12 +929,12 @@ export default function App() {
       <main className="flex-1 p-10 overflow-y-auto">
         <div className="max-w-7xl mx-auto h-full">
           {showAdmin && currentUser?.isAdmin ? (
-            <AdminDashboard 
-              logs={logs} 
-              costLogs={costLogs} 
-              rankLogs={rankLogs} 
-              users={usersList} 
-              dictatLogs={dictatLogs} 
+            <AdminDashboard
+              logs={logs}
+              costLogs={costLogs}
+              rankLogs={rankLogs}
+              users={usersList}
+              dictatLogs={dictatLogs}
               appStatuses={appStatuses}
               onResetPin={handleAdminPinReset} 
               onToggleStatus={handleToggleUserStatus} 
@@ -944,9 +944,9 @@ export default function App() {
             />
           ) : (
             <div className="relative h-full">
-              {/* Grid responsive: 1col mòbil → 5cols desktop wide perquè totes les
-                  apps caben en una sola pantalla 1920×1080 sense scroll. */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-5 pb-6 relative z-10">
+              {/* Grid responsive: 1col mòbil → 4cols desktop sempre.
+                  9 apps en 3 files (4+4+1) o totes en 2 files (4+5) segons quantitat. */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 pb-6 relative z-10">
               {APP_LINKS
                 .filter(link => {
                   // Apps adminOnly: NOMÉS visibles per al TIP 5085 (no per a qualsevol admin)
@@ -971,7 +971,7 @@ export default function App() {
         </div>
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 flex justify-center items-center px-10">
-        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.51 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.54 • AES-256 ENCRYPTION ACTIVE</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per Admins) */}
@@ -1028,7 +1028,44 @@ export default function App() {
 }
 
 function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatuses, onResetPin, onToggleStatus, onCreateUser, onUpdateName, onToggleAppStatus }: { logs: any[], costLogs: any[], rankLogs: any[], users: any[], dictatLogs: any[], appStatuses: Record<string, string>, onResetPin: (tip: string) => void, onToggleStatus: (tip: string, current: string) => void, onCreateUser: (tip: string, name: string) => void, onUpdateName: (tip: string, name: string) => void, onToggleAppStatus: (appId: string, current: string) => void }) {
-  const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos' | 'dictat' | 'apps'>('activity');
+  const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos' | 'dictat' | 'minutes' | 'apps'>('activity');
+  const [minutesLogs, setMinutesLogs] = useState<any[]>([]);
+  // Lectura dels documents de LA 6 (projecte Firebase: dictat-minutes) via REST.
+  // Polling cada 30 s — LA 6 desa amb REST i no SDK, així que aquí també.
+  useEffect(() => {
+    const fetchMinutes = async () => {
+      try {
+        const URL = 'https://firestore.googleapis.com/v1/projects/dictat-minutes/databases/(default)/documents/reports?pageSize=100&key=AIzaSyA7F0JZHcgRVb8tPl1oJuHSDYmxkWTktUY';
+        const r = await fetch(URL);
+        if (!r.ok) return;
+        const data = await r.json();
+        const docs = (data.documents || []).map((doc: any) => {
+          const id = doc.name.split('/').pop();
+          const fields = doc.fields || {};
+          const result: any = { id };
+          for (const k in fields) {
+            const v = fields[k];
+            const t = Object.keys(v)[0];
+            result[k] = t === 'timestampValue' ? new Date(v[t])
+                       : t === 'integerValue' ? Number(v[t])
+                       : v[t];
+          }
+          return result;
+        });
+        docs.sort((a: any, b: any) => {
+          const da = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
+          const db = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
+          return db - da;
+        });
+        setMinutesLogs(docs);
+      } catch (err) {
+        console.error('Minutes fetch error:', err);
+      }
+    };
+    fetchMinutes();
+    const interval = setInterval(fetchMinutes, 30000);
+    return () => clearInterval(interval);
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingTip, setEditingTip] = useState<string | null>(null);
@@ -1201,6 +1238,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
         <button onClick={() => setActiveTab('ranking')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'ranking' ? 'bg-amber-500 text-black' : 'text-slate-400 hover:text-white'}`}>Rànquing d'Ús</button>
         <button onClick={() => setActiveTab('costos')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'costos' ? 'bg-emerald-500 text-black' : 'text-slate-400 hover:text-white'}`}>Despesa Mensual</button>
         <button onClick={() => setActiveTab('dictat')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'dictat' ? 'bg-blue-500 text-white' : 'text-slate-400 hover:text-white'}`}>Informes Dictat</button>
+        <button onClick={() => setActiveTab('minutes')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'minutes' ? 'bg-purple-500 text-white' : 'text-slate-400 hover:text-white'}`}>Minutes LA 6 ({minutesLogs.length})</button>
         <button onClick={() => setActiveTab('apps')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'apps' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}>Gestió Apps</button>
       </div>
 
@@ -1400,6 +1438,50 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
               })}
               {(!dictatLogs || dictatLogs.length === 0) && <p className="text-center py-10 text-slate-500 text-[12px] lg:text-[16px] uppercase font-black">No hi ha informes recents</p>}
             </div>
+          ) : activeTab === 'minutes' ? (
+            <div className="space-y-4">
+              {Array.isArray(minutesLogs) && minutesLogs.map((log) => {
+                const tip = String(log?.agentTip || '???');
+                let agentName = '';
+                try {
+                  const sTip = tip.replace(/\D/g, '').replace(/^0+/, '');
+                  if (sTip) {
+                    const match = (users || []).find(u => {
+                      const uTip = String(u?.id || u?.tip || '').replace(/\D/g, '').replace(/^0+/, '');
+                      return uTip === sTip;
+                    });
+                    if (match) agentName = match.name || '';
+                  }
+                } catch (e) {}
+                let dateStr = '—';
+                try {
+                  if (log?.createdAt instanceof Date) dateStr = log.createdAt.toLocaleString();
+                  else if (log?.createdAt) dateStr = new Date(log.createdAt).toLocaleString();
+                } catch (e) {}
+                const tipus = log?.type || 'Document';
+                return (
+                  <div key={log?.id || Math.random()} className="p-5 bg-black/20 border border-white/5 rounded-2xl flex flex-col gap-3">
+                    <div className="flex justify-between items-start flex-wrap gap-3">
+                      <div className="flex items-center gap-3">
+                        <AgentBadge tip={tip} />
+                        <div className="flex flex-col">
+                          <span className="text-[14px] lg:text-[18px] font-black text-purple-400 uppercase">{tipus}</span>
+                          <span className="text-[11px] lg:text-[13px] font-bold text-slate-500">
+                            {agentName ? `${agentName} • TIP: ${tip}` : `TIP: ${tip}`}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[11px] lg:text-[13px] text-slate-500 font-mono font-black">{dateStr}</span>
+                    </div>
+                    <div className="bg-purple-500/10 border border-purple-500/20 p-5 rounded-[2rem] shadow-inner">
+                      <p className="text-[10px] lg:text-[12px] text-purple-300 uppercase tracking-[0.2em] font-black mb-3">Minuta / Informe</p>
+                      <p className="text-[12px] lg:text-[13px] text-purple-50 font-medium whitespace-pre-wrap leading-relaxed font-sans tracking-tight">{log?.content || ''}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              {(!minutesLogs || minutesLogs.length === 0) && <p className="text-center py-10 text-slate-500 text-[12px] lg:text-[16px] uppercase font-black">No hi ha minutes ni informes desats</p>}
+            </div>
           ) : activeTab === 'apps' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {APP_LINKS.map((app) => {
@@ -1498,7 +1580,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-5 lg:p-5 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[200px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
+      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-5 lg:p-6 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[218px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
     >
       {link.status === 'maintenance' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
@@ -1512,8 +1594,8 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
         <span className="text-[8px] lg:text-[10px] font-mono text-slate-600">{link.code}</span>
       </div>
       <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-        <h3 className="text-lg lg:text-base font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-1.5 lg:mb-2 whitespace-pre-line">{link.title}</h3>
-        <p className="text-slate-400 text-xs lg:text-[11px] font-medium leading-snug line-clamp-2">{link.description}</p>
+        <h3 className="text-xl lg:text-lg font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-2 whitespace-pre-line">{link.title}</h3>
+        <p className="text-slate-400 text-xs lg:text-[12px] font-medium leading-snug line-clamp-2">{link.description}</p>
       </div>
       <div className={`flex items-center justify-between pt-3 lg:pt-3 border-t border-white/5 mt-3 lg:mt-3 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
         <div className="flex items-center gap-2">
