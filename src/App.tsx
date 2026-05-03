@@ -971,7 +971,7 @@ export default function App() {
         </div>
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 flex justify-center items-center px-10">
-        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.54 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.55 • AES-256 ENCRYPTION ACTIVE</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per Admins) */}
@@ -1027,9 +1027,62 @@ export default function App() {
   );
 }
 
+// Control de tamany de font per a llistats de minutes/informes al panell admin.
+// Permet ajustar entre 11 i 24 px per millorar lectura còmoda (presbícia).
+function FontSizeControl({ size, onChange }: { size: number; onChange: (n: number) => void }) {
+  return (
+    <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 w-fit shadow-inner">
+      <span className="text-[10px] uppercase tracking-widest font-black text-slate-400">Font</span>
+      <button
+        onClick={() => onChange(Math.max(11, size - 1))}
+        disabled={size <= 11}
+        className="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-lg font-black flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+        title="Reduir font"
+      >−</button>
+      <input
+        type="range"
+        min={11}
+        max={24}
+        value={size}
+        onChange={(e) => onChange(parseInt(e.target.value, 10))}
+        className="w-32 accent-blue-500 cursor-pointer"
+      />
+      <button
+        onClick={() => onChange(Math.min(24, size + 1))}
+        disabled={size >= 24}
+        className="w-8 h-8 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-lg font-black flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+        title="Augmentar font"
+      >+</button>
+      <span className="text-xs font-mono font-black text-blue-400 min-w-[36px] text-center">{size}px</span>
+      {size !== 15 && (
+        <button
+          onClick={() => onChange(15)}
+          className="text-[10px] uppercase tracking-widest font-bold text-slate-500 hover:text-white transition-colors"
+          title="Tornar al tamany per defecte"
+        >Reset</button>
+      )}
+    </div>
+  );
+}
+
 function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatuses, onResetPin, onToggleStatus, onCreateUser, onUpdateName, onToggleAppStatus }: { logs: any[], costLogs: any[], rankLogs: any[], users: any[], dictatLogs: any[], appStatuses: Record<string, string>, onResetPin: (tip: string) => void, onToggleStatus: (tip: string, current: string) => void, onCreateUser: (tip: string, name: string) => void, onUpdateName: (tip: string, name: string) => void, onToggleAppStatus: (appId: string, current: string) => void }) {
   const [activeTab, setActiveTab] = useState<'activity' | 'users' | 'ranking' | 'costos' | 'dictat' | 'minutes' | 'apps'>('activity');
   const [minutesLogs, setMinutesLogs] = useState<any[]>([]);
+  // Tamany de font ajustable per a les llistes d'informes (Dictat LA 1 + Minutes LA 6).
+  // Persistent al localStorage perquè cada admin recordi la seva preferència.
+  const [adminFontSize, setAdminFontSize] = useState<number>(() => {
+    if (typeof window === 'undefined') return 15;
+    const saved = parseInt(localStorage.getItem('admin_font_size') || '15', 10);
+    return isNaN(saved) ? 15 : Math.min(24, Math.max(11, saved));
+  });
+  useEffect(() => {
+    try { localStorage.setItem('admin_font_size', String(adminFontSize)); } catch {}
+  }, [adminFontSize]);
+  // Helper: el TIP de l'admin (5085) NO ha d'aparèixer als llistats — és l'administrador.
+  const isAdminTip = (tip: any): boolean => {
+    const s = String(tip || '').replace(/\D/g, '').replace(/^0+/, '');
+    return s === '5085';
+  };
   // Lectura dels documents de LA 6 (projecte Firebase: dictat-minutes) via REST.
   // Polling cada 30 s — LA 6 desa amb REST i no SDK, així que aquí també.
   useEffect(() => {
@@ -1387,7 +1440,12 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
             </div>
           ) : activeTab === 'dictat' ? (
             <div className="space-y-4">
-                  {Array.isArray(dictatLogs) && dictatLogs.map((log) => {
+                  {/* Selector de tamany de font — comú per a Dictat i Minutes */}
+                  <FontSizeControl size={adminFontSize} onChange={setAdminFontSize} />
+                  {Array.isArray(dictatLogs) && dictatLogs.filter((log) => {
+                    const t = log?.tip || log?.agent_tip || log?.agentTip || log?.id_agent || log?.agent_id || log?.usuari || log?.usuario || log?.user || log?.tip_agent_1 || log?.instructor || log?.idAgent || log?.agent || log?.userId || log?.user_id || log?.userName || log?.author || '';
+                    return !isAdminTip(t);
+                  }).map((log) => {
                     let agentName = '';
                     const actualTip = log?.tip || log?.agent_tip || log?.agentTip || log?.id_agent || log?.agent_id || log?.usuari || log?.usuario || log?.user || log?.tip_agent_1 || log?.instructor || log?.idAgent || log?.agent || log?.userId || log?.user_id || log?.userName || log?.author || '';
                     try {
@@ -1426,11 +1484,11 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                       <div className="bg-white/5 border border-white/5 p-5 rounded-[2rem] flex flex-col h-full shadow-inner">
                         <p className="text-[10px] lg:text-[12px] text-slate-500 uppercase tracking-[0.2em] font-black mb-3">Relat Capturat de l'Agent</p>
-                        <p className="text-[12px] text-slate-200 font-medium whitespace-pre-wrap leading-relaxed flex-1 italic opacity-90 font-sans tracking-tight">{log?.input || ''}</p>
+                        <p className="text-slate-200 font-medium whitespace-pre-wrap leading-relaxed flex-1 italic opacity-90 font-sans" style={{ fontSize: `${adminFontSize}px`, lineHeight: 1.6 }}>{log?.input || ''}</p>
                       </div>
                       <div className="bg-blue-500/10 border border-blue-500/20 p-5 rounded-[2rem] flex flex-col h-full shadow-xl">
                         <p className="text-[10px] lg:text-[12px] text-blue-400 uppercase tracking-[0.2em] font-black mb-3">Informe Generat</p>
-                        <p className="text-[12px] text-blue-50 font-medium whitespace-pre-wrap leading-relaxed flex-1 font-sans tracking-tight">{log?.report || ''}</p>
+                        <p className="text-blue-50 font-medium whitespace-pre-wrap leading-relaxed flex-1 font-sans" style={{ fontSize: `${adminFontSize}px`, lineHeight: 1.6 }}>{log?.report || ''}</p>
                       </div>
                     </div>
                   </div>
@@ -1440,7 +1498,8 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
             </div>
           ) : activeTab === 'minutes' ? (
             <div className="space-y-4">
-              {Array.isArray(minutesLogs) && minutesLogs.map((log) => {
+              <FontSizeControl size={adminFontSize} onChange={setAdminFontSize} />
+              {Array.isArray(minutesLogs) && minutesLogs.filter((log) => !isAdminTip(log?.agentTip)).map((log) => {
                 const tip = String(log?.agentTip || '???');
                 let agentName = '';
                 try {
@@ -1475,7 +1534,7 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                     </div>
                     <div className="bg-purple-500/10 border border-purple-500/20 p-5 rounded-[2rem] shadow-inner">
                       <p className="text-[10px] lg:text-[12px] text-purple-300 uppercase tracking-[0.2em] font-black mb-3">Minuta / Informe</p>
-                      <p className="text-[12px] lg:text-[13px] text-purple-50 font-medium whitespace-pre-wrap leading-relaxed font-sans tracking-tight">{log?.content || ''}</p>
+                      <p className="text-purple-50 font-medium whitespace-pre-wrap leading-relaxed font-sans" style={{ fontSize: `${adminFontSize}px`, lineHeight: 1.6 }}>{log?.content || ''}</p>
                     </div>
                   </div>
                 );
