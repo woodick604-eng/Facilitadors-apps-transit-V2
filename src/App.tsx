@@ -944,7 +944,9 @@ export default function App() {
             />
           ) : (
             <div className="relative h-full">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10 relative z-10">
+              {/* Grid responsive: 1col mòbil → 5cols desktop wide perquè totes les
+                  apps caben en una sola pantalla 1920×1080 sense scroll. */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-5 pb-6 relative z-10">
               {APP_LINKS
                 .filter(link => {
                   // Apps adminOnly: NOMÉS visibles per al TIP 5085 (no per a qualsevol admin)
@@ -969,7 +971,7 @@ export default function App() {
         </div>
       </main>
       <footer className="shrink-0 p-4 border-t border-white/5 bg-[#0f172a]/50 flex justify-center items-center px-10">
-        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.50 • AES-256 ENCRYPTION ACTIVE</p>
+        <p className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest">v2.51 • AES-256 ENCRYPTION ACTIVE</p>
       </footer>
 
       {/* Botó Flotant d'Agents Actius (Sempre Visible per Admins) */}
@@ -1496,34 +1498,37 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-6 lg:p-8 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[280px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
+      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-5 lg:p-5 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[200px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
     >
       {link.status === 'maintenance' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="bg-amber-500 text-black px-8 py-2 -rotate-12 font-black text-xl tracking-widest uppercase shadow-2xl border-y-2 border-dashed border-black/50 overflow-hidden w-[120%] text-center">
+          <div className="bg-amber-500 text-black px-6 py-1.5 -rotate-12 font-black text-base tracking-widest uppercase shadow-2xl border-y-2 border-dashed border-black/50 overflow-hidden w-[120%] text-center">
             {link.maintenanceMsg || 'En Construcció'}
           </div>
         </div>
       )}
       <div className={`flex justify-between items-start z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-        <div className={`w-14 h-14 lg:w-18 lg:h-18 rounded-2xl flex items-center justify-center shadow-2xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : link.category === 'admin' ? 'bg-amber-600/20 text-amber-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-7 h-7 lg:w-9 lg:h-9" /></div>
-        <span className="text-[8px] lg:text-xs font-mono text-slate-600">{link.code}</span>
+        <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center shadow-xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : link.category === 'admin' ? 'bg-amber-600/20 text-amber-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-6 h-6 lg:w-7 lg:h-7" /></div>
+        <span className="text-[8px] lg:text-[10px] font-mono text-slate-600">{link.code}</span>
       </div>
-      <div className={`mt-6 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}><h3 className="text-xl lg:text-2xl font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-2 lg:mb-3 whitespace-pre-line">{link.title}</h3><p className="text-slate-400 text-xs lg:text-sm font-medium lg:leading-relaxed line-clamp-3">{link.description}</p></div>
-      <div className={`flex items-center justify-between pt-6 border-t border-white/5 mt-6 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
+      <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
+        <h3 className="text-lg lg:text-base font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-1.5 lg:mb-2 whitespace-pre-line">{link.title}</h3>
+        <p className="text-slate-400 text-xs lg:text-[11px] font-medium leading-snug line-clamp-2">{link.description}</p>
+      </div>
+      <div className={`flex items-center justify-between pt-3 lg:pt-3 border-t border-white/5 mt-3 lg:mt-3 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
         <div className="flex items-center gap-2">
-          <div className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full ${link.category === 'dictat' ? 'bg-blue-500' : link.category === 'imatges' ? 'bg-emerald-500' : 'bg-purple-500'}`} />
-          <span className="text-[10px] lg:text-xs font-black uppercase text-slate-500">{link.category}</span>
+          <div className={`w-1.5 h-1.5 rounded-full ${link.category === 'dictat' ? 'bg-blue-500' : link.category === 'imatges' ? 'bg-emerald-500' : 'bg-purple-500'}`} />
+          <span className="text-[9px] lg:text-[10px] font-black uppercase text-slate-500">{link.category}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {link.category === 'imatges' && (
-            <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full">
-              <Monitor className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">Versió Escriptori</span>
+            <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+              <Monitor className="w-3 h-3 text-emerald-400" />
+              <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider">Escriptori</span>
             </div>
           )}
           {link.status !== 'maintenance' && (
-            <ExternalLink className="w-5 h-5 text-mossos-blue translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
+            <ExternalLink className="w-4 h-4 text-mossos-blue translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
           )}
         </div>
       </div>
