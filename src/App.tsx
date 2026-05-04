@@ -944,6 +944,15 @@ export default function App() {
             />
           ) : (
             <div className="relative h-full">
+              {/* Avís permanent — què fer si una app no funciona */}
+              <div className="mb-4 lg:mb-6 px-4 py-3 bg-amber-500/10 border border-amber-500/40 rounded-xl flex items-center gap-3 text-[12px] lg:text-[13px]">
+                <span className="text-amber-400 text-xl shrink-0">⚠️</span>
+                <p className="text-amber-100/90 leading-relaxed">
+                  <span className="font-bold text-amber-300">Si alguna app no funciona:</span>{' '}
+                  pot ser que s'estigui actualitzant. Prem <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">F5</kbd> o <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">⌘ ⇧ R</kbd> diverses vegades per refrescar.
+                  Si segueix sense funcionar, avisa l'<span className="font-bold text-amber-300">administrador (5085)</span>.
+                </p>
+              </div>
               {/* Grid responsive: 1col mòbil → 4cols desktop sempre.
                   9 apps en 3 files (4+4+1) o totes en 2 files (4+5) segons quantitat. */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 pb-6 relative z-10">
