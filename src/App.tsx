@@ -282,6 +282,7 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
+
   // Auto-omplir TIP des de localStorage despres de veure l'animacio de la moto
   useEffect(() => {
     const saved = localStorage.getItem('agentTIP');
@@ -290,6 +291,17 @@ export default function App() {
       return () => clearTimeout(t);
     }
   }, []);
+
+  // Auto-submit del PIN: quan l'usuari teclegeja el 4t dígit i NO és el primer
+  // login (creació de PIN), validem automàticament sense haver de pulsar el botó.
+  useEffect(() => {
+    if (!isTipValidated || !tempUserData) return;
+    if (tempUserData.firstLogin) return;
+    if (pin.length === 4 && !error) {
+      const t = setTimeout(() => { doAuth(); }, 80);
+      return () => clearTimeout(t);
+    }
+  }, [pin, isTipValidated, tempUserData, error]);
 
   // Scroll al camp PIN quan el TIP es valida (util al mobil)
   /* Comentat per petició de l'usuari per mantenir el scroll a dalt
@@ -494,6 +506,10 @@ export default function App() {
 
   const handleAuth = async (e: FormEvent) => {
     e.preventDefault();
+    return doAuth();
+  };
+
+  const doAuth = async () => {
     if (!isTipValidated || !tempUserData) return;
 
     if (tempUserData.firstLogin) {
@@ -723,8 +739,8 @@ export default function App() {
           )}
 
           <div className="text-center mb-6 lg:mb-8">
-            <div className="flex items-center justify-center w-[260px] h-[350px] lg:w-[420px] lg:h-[560px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 animate-pulse-fast relative">
-              <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
+            <div className="flex items-center justify-center w-[260px] h-[350px] lg:w-[420px] lg:h-[560px] mb-6 lg:mb-8 transition-all duration-500 rounded-[3.5rem] md:rounded-[4rem] overflow-hidden shadow-2xl mx-auto border-4 border-white/5 relative pointer-events-none select-none">
+              <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" draggable={false} />
               {/* Pilot blau Davanter (dreta, al costat de la roda far davanter) */}
               <div className="absolute w-[2.5%] h-[1.8%] bg-blue-400 rounded-full animate-police-strobe mix-blend-screen" style={{ top: '38.5%', right: '29.5%' }} />
               {/* Pilot blau Posterior (esquerra, seient posterior) */}
@@ -740,7 +756,7 @@ export default function App() {
             </div>
           </div>
 
-          <form onSubmit={handleAuth} className="space-y-6">
+          <form onSubmit={handleAuth} className="space-y-3">
             <div className={`transition-all ${tipInput.length > 0 ? 'flex flex-col items-center' : ''}`}>
               <label className={`block text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 ${tipInput.length > 0 ? 'text-center pl-0' : 'pl-1'}`}>Número TIP</label>
               <div className={`relative flex items-center transition-all ${tipInput.length > 0 ? 'justify-center w-fit' : 'w-full'}`}>
@@ -760,11 +776,10 @@ export default function App() {
 
             <AnimatePresence>
               {isTipValidated && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-6 overflow-hidden">
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl text-center">
-                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">AGENT VALIDAT: {tempUserData?.name}</p>
-                    {tempUserData?.firstLogin && <p className="text-[8px] text-slate-400 uppercase mt-1">Si us plau, crea el teu PIN personal de 4 xifres</p>}
-                  </div>
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="space-y-3 overflow-hidden">
+                  {tempUserData?.firstLogin && (
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest text-center">Crea el teu PIN personal de 4 xifres</p>
+                  )}
 
                   {tempUserData?.firstLogin ? (
                     <div className="space-y-4">
@@ -842,9 +857,9 @@ export default function App() {
         </>
       )}
 
-      <header className="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 px-8 py-6 flex justify-between items-center shadow-2xl shrink-0">
-        <div className="flex items-center gap-6">
-          <div className="w-[100px] h-[100px] flex items-center justify-center rounded-2xl overflow-hidden shadow-lg border border-white/10 animate-pulse-fast">
+      <header className="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 px-8 py-6 lg:py-3 flex justify-between items-center shadow-2xl shrink-0">
+        <div className="flex items-center gap-6 lg:gap-4">
+          <div className="w-[100px] h-[100px] lg:w-[60px] lg:h-[60px] flex items-center justify-center rounded-2xl overflow-hidden shadow-lg border border-white/10 animate-pulse-fast">
             <img src="/escud-transit-v2.png" className="w-full h-full object-cover" alt="Escut Trànsit" />
           </div>
           <div>
@@ -893,15 +908,15 @@ export default function App() {
               </div>
             )}
             <div className="hidden lg:block text-right">
-              <span className="block text-4xl font-mono font-black text-white tracking-tighter tabular-nums leading-none">
+              <span className="block text-2xl xl:text-3xl font-mono font-black text-white tracking-tighter tabular-nums leading-none">
                 {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
-              <span className="block text-[14px] font-black text-slate-400 uppercase tracking-widest mt-2 mb-3">
+              <span className="block text-[11px] xl:text-[12px] font-black text-slate-400 uppercase tracking-widest mt-1 mb-1">
                 {currentTime.toLocaleDateString('ca-ES', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
               </span>
-              <span className="text-[14px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-end gap-3">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <AgentBadge tip={currentUser?.tip || ''} className="text-[20px] px-4 py-1.5 ml-2 mr-4" /> • {currentUser?.name}
+              <span className="text-[11px] xl:text-[12px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-end gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <AgentBadge tip={currentUser?.tip || ''} className="text-[14px] px-2.5 py-1 ml-1 mr-1" /> • {currentUser?.name}
               </span>
             </div>
             <button 
@@ -909,7 +924,7 @@ export default function App() {
                 logActivity('Obertura Disclaimer Legal');
                 setShowLegalModal(true);
               }}
-              className="p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest group"
+              className="p-4 lg:p-2.5 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest group"
               title="Consultar Avís Legal i Seguretat"
             >
               <ShieldCheck className="w-6 h-6" /> 
@@ -917,7 +932,7 @@ export default function App() {
             </button>
             <button 
               onClick={() => { logActivity('Tancament de sessió'); setIsAuthenticated(false); setCurrentUser(null); setShowAdmin(false); setPin(''); setConfirmPin(''); }} 
-              className="p-4 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-mossos-red hover:text-white transition-all"
+              className="p-4 lg:p-2.5 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:bg-mossos-red hover:text-white transition-all"
               title="Tancar sessió segura"
             >
               <LogOut className="w-6 h-6" />
@@ -926,7 +941,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="flex-1 p-10 overflow-y-auto">
+      <main className="flex-1 p-10 lg:p-5 lg:overflow-hidden overflow-y-auto">
         <div className="max-w-7xl mx-auto h-full">
           {showAdmin && currentUser?.isAdmin ? (
             <AdminDashboard
@@ -945,17 +960,19 @@ export default function App() {
           ) : (
             <div className="relative h-full">
               {/* Avís permanent — què fer si una app no funciona */}
-              <div className="mb-4 lg:mb-6 px-4 py-3 bg-amber-500/10 border border-amber-500/40 rounded-xl flex items-center gap-3 text-[12px] lg:text-[13px]">
-                <span className="text-amber-400 text-xl shrink-0">⚠️</span>
-                <p className="text-amber-100/90 leading-relaxed">
+              <div className="mb-4 lg:mb-2 px-4 py-3 lg:py-1.5 bg-amber-500/10 border border-amber-500/40 rounded-xl flex items-center gap-3 text-[12px] lg:text-[11px]">
+                <span className="text-amber-400 text-xl lg:text-base shrink-0">⚠️</span>
+                <p className="text-amber-100/90 leading-relaxed lg:leading-snug">
                   <span className="font-bold text-amber-300">Si alguna app no funciona:</span>{' '}
                   pot ser que s'estigui actualitzant. Prem <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">F5</kbd> o <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">⌘ ⇧ R</kbd> diverses vegades per refrescar.
                   Si segueix sense funcionar, avisa l'<span className="font-bold text-amber-300">administrador (5085)</span>.
                 </p>
               </div>
               {/* Grid responsive: 1col mòbil → 4cols desktop sempre.
-                  9 apps en 3 files (4+4+1) o totes en 2 files (4+5) segons quantitat. */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 pb-6 relative z-10">
+                  9 apps en 3 files (4+4+1) o totes en 2 files (4+5) segons quantitat.
+                  En escriptori les caixes s'alcen amb auto-rows-fr per omplir l'altura
+                  disponible sense scroll (`lg:auto-rows-fr`). */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-3 pb-6 lg:pb-0 relative z-10 lg:auto-rows-fr lg:h-[calc(100%-3rem)]">
               {APP_LINKS
                 .filter(link => {
                   // Apps adminOnly: NOMÉS visibles per al TIP 5085 (no per a qualsevol admin)
@@ -1032,6 +1049,7 @@ export default function App() {
       {showLegalModal && (
         <LegalModalContent onClose={() => { localStorage.setItem('legal_accepted_v_global', 'true'); setShowLegalModal(false); }} />
       )}
+
     </div>
   );
 }
@@ -1648,7 +1666,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-5 lg:p-6 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-[218px] ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
+      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-5 lg:p-3 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-0 lg:h-full ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
     >
       {link.status === 'maintenance' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
@@ -1658,7 +1676,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
         </div>
       )}
       <div className={`flex justify-between items-start z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-        <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center shadow-xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : link.category === 'admin' ? 'bg-amber-600/20 text-amber-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-6 h-6 lg:w-7 lg:h-7" /></div>
+        <div className={`w-12 h-12 lg:w-10 lg:h-10 rounded-2xl flex items-center justify-center shadow-xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : link.category === 'admin' ? 'bg-amber-600/20 text-amber-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-6 h-6 lg:w-5 lg:h-5" /></div>
         <span className="text-[8px] lg:text-[10px] font-mono text-slate-600">{link.code}</span>
       </div>
       <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>

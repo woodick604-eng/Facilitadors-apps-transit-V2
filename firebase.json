@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "facilitadors-transit",
     "public": "dist",
     "ignore": [
       "firebase.json",
