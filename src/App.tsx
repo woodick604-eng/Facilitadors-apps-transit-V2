@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.60</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.61</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -959,15 +959,7 @@ export default function App() {
             />
           ) : (
             <div className="relative h-full">
-              {/* Avís permanent — què fer si una app no funciona */}
-              <div className="mb-4 lg:mb-2 px-4 py-3 lg:py-1.5 bg-amber-500/10 border border-amber-500/40 rounded-xl flex items-center gap-3 text-[12px] lg:text-[11px]">
-                <span className="text-amber-400 text-xl lg:text-base shrink-0">⚠️</span>
-                <p className="text-amber-100/90 leading-relaxed lg:leading-snug">
-                  <span className="font-bold text-amber-300">Si alguna app no funciona:</span>{' '}
-                  pot ser que s'estigui actualitzant. Prem <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">F5</kbd> o <kbd className="px-1.5 py-0.5 bg-white/10 rounded text-[11px] font-mono">⌘ ⇧ R</kbd> diverses vegades per refrescar.
-                  Si segueix sense funcionar, avisa l'<span className="font-bold text-amber-300">administrador (5085)</span>.
-                </p>
-              </div>
+              {/* (Avís d'actualització/F5 retirat — ja no es mostra) */}
               {/* Grid responsive: 1col mòbil → 4cols desktop sempre.
                   9 apps en 3 files (4+4+1) o totes en 2 files (4+5) segons quantitat.
                   En escriptori les caixes s'alcen amb auto-rows-fr per omplir l'altura
@@ -1112,32 +1104,44 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
   };
   // Lectura dels documents de LA 6 (projecte Firebase: dictat-minutes) via REST.
   // Polling cada 30 s — LA 6 desa amb REST i no SDK, així que aquí també.
+  // Paginem fins a esgotar nextPageToken per agafar TOTES les minutes (abans
+  // limitàvem a 100, que era massa baix per a un cos amb molts agents).
   useEffect(() => {
     const fetchMinutes = async () => {
       try {
-        const URL = 'https://firestore.googleapis.com/v1/projects/dictat-minutes/databases/(default)/documents/reports?pageSize=100&key=AIzaSyA7F0JZHcgRVb8tPl1oJuHSDYmxkWTktUY';
-        const r = await fetch(URL);
-        if (!r.ok) return;
-        const data = await r.json();
-        const docs = (data.documents || []).map((doc: any) => {
-          const id = doc.name.split('/').pop();
-          const fields = doc.fields || {};
-          const result: any = { id };
-          for (const k in fields) {
-            const v = fields[k];
-            const t = Object.keys(v)[0];
-            result[k] = t === 'timestampValue' ? new Date(v[t])
-                       : t === 'integerValue' ? Number(v[t])
-                       : v[t];
-          }
-          return result;
-        });
-        docs.sort((a: any, b: any) => {
+        const KEY = 'AIzaSyA7F0JZHcgRVb8tPl1oJuHSDYmxkWTktUY';
+        const BASE = `https://firestore.googleapis.com/v1/projects/dictat-minutes/databases/(default)/documents/reports?pageSize=300&key=${KEY}`;
+        let nextPageToken: string | undefined = undefined;
+        const allDocs: any[] = [];
+        // Fins a 10 pàgines (3000 docs) com a hard cap defensiu
+        for (let page = 0; page < 10; page++) {
+          const url = nextPageToken ? `${BASE}&pageToken=${encodeURIComponent(nextPageToken)}` : BASE;
+          const r = await fetch(url);
+          if (!r.ok) break;
+          const data = await r.json();
+          const docs = (data.documents || []).map((doc: any) => {
+            const id = doc.name.split('/').pop();
+            const fields = doc.fields || {};
+            const result: any = { id };
+            for (const k in fields) {
+              const v = fields[k];
+              const t = Object.keys(v)[0];
+              result[k] = t === 'timestampValue' ? new Date(v[t])
+                         : t === 'integerValue' ? Number(v[t])
+                         : v[t];
+            }
+            return result;
+          });
+          allDocs.push(...docs);
+          nextPageToken = data.nextPageToken;
+          if (!nextPageToken) break;
+        }
+        allDocs.sort((a: any, b: any) => {
           const da = a.createdAt instanceof Date ? a.createdAt.getTime() : 0;
           const db = b.createdAt instanceof Date ? b.createdAt.getTime() : 0;
           return db - da;
         });
-        setMinutesLogs(docs);
+        setMinutesLogs(allDocs);
       } catch (err) {
         console.error('Minutes fetch error:', err);
       }
@@ -1355,18 +1359,22 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {activeTab === 'activity' ? (
-            visibleActivityLogs.map((log, i) => (
+            <>
+              {/* v4.06 — Selector de mida de font també per ACTIVITAT.
+                   El "qui" (nom + TIP) i "què" (ús de) eren massa petits. */}
+              <FontSizeControl size={adminFontSize} onChange={setAdminFontSize} />
+              {visibleActivityLogs.map((log, i) => (
               <div key={i} className={`flex justify-between p-4 bg-black/20 border rounded-2xl transition-all ${log.success ? 'border-emerald-500/30' : 'border-white/5'}`}>
                 <div className="flex items-center gap-4">
                   <AgentBadge tip={log.tip} className="scale-125 mx-2" />
                   <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-[10px] font-black text-white uppercase">{log.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-black text-white uppercase" style={{ fontSize: `${adminFontSize}px`, lineHeight: 1.3 }}>{log.name}</p>
                       {log.success && <span className="text-[8px] bg-emerald-500 text-black px-1.5 py-0.5 rounded font-black flex items-center gap-1 shadow-lg shadow-emerald-500/20"><Check className="w-2 h-2" /> ÈXIT / ACABAT</span>}
                     </div>
-                    <p className="text-[8px] font-bold text-amber-500 uppercase mt-1">
+                    <p className="font-bold text-amber-500 uppercase mt-1" style={{ fontSize: `${Math.max(10, adminFontSize - 3)}px`, lineHeight: 1.4 }}>
                       {log.type === 'session' ? (
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-2 flex-wrap">
                           <Activity className="w-3 h-3" /> ÚS DE: <span className="text-white bg-white/10 px-2 rounded">{log.app}</span> {log.count > 1 && `(x${log.count} ops)`}
                         </span>
                       ) : (
@@ -1375,20 +1383,21 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
                       {log.totalCost > 0 && <span className="ml-2 text-emerald-500 bg-emerald-500/10 px-2 rounded">[{log.totalCost.toFixed(4)} €]</span>}
                     </p>
                     {log.details && log.details.length > 0 && (
-                      <p className="text-[10px] lg:text-[13px] font-mono text-slate-400 mt-1 uppercase flex gap-2">
+                      <p className="font-mono text-slate-400 mt-1 uppercase flex gap-2 flex-wrap" style={{ fontSize: `${Math.max(10, adminFontSize - 3)}px`, lineHeight: 1.4 }}>
                         {log.details.map((d: any, idx: number) => <span key={idx} className="bg-black/40 px-1 border border-white/5 rounded">↳ {d}</span>)}
                       </p>
                     )}
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[12px] lg:text-[15px] font-mono text-slate-500">{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date(log.timestamp).toLocaleString()}</p>
+                  <p className="font-mono text-slate-500" style={{ fontSize: `${Math.max(10, adminFontSize - 2)}px`, lineHeight: 1.3 }}>{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString() : new Date(log.timestamp).toLocaleString()}</p>
                   {log.endTime && (
-                    <p className="text-[10px] lg:text-[13px] font-mono text-slate-600 mt-1 uppercase">Sessió Finalitzada</p>
+                    <p className="font-mono text-slate-600 mt-1 uppercase" style={{ fontSize: `${Math.max(10, adminFontSize - 4)}px` }}>Sessió Finalitzada</p>
                   )}
                 </div>
               </div>
-            ))
+              ))}
+            </>
           ) : activeTab === 'costos' ? (
             <div className="space-y-8">
               {costsByYear.map((yearGroup) => (
@@ -1437,28 +1446,34 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
             </div>
           ) : activeTab === 'ranking' ? (
             <div className="space-y-2">
+              {/* v4.06 — Selector de mida de font també per RÀNQUING.
+                   Els noms d'agents i els pills d'apps eren massa petits. */}
+              <FontSizeControl size={adminFontSize} onChange={setAdminFontSize} />
               {usageRanking.map((rank, i) => (
                 <div key={i} className="flex items-center justify-between p-4 bg-black/20 border border-white/5 rounded-2xl">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-amber-500 text-black flex items-center justify-center font-black text-[12px]">{i + 1}</div>
-                    <div><p className="text-[10px] font-black text-white uppercase">{rank.name}</p><AgentBadge tip={rank.tip} /></div>
+                    <div>
+                      <p className="font-black text-white uppercase" style={{ fontSize: `${adminFontSize}px`, lineHeight: 1.3 }}>{rank.name}</p>
+                      <AgentBadge tip={rank.tip} />
+                    </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex gap-4 items-center">
                       <div className="flex flex-wrap gap-1.5 justify-end max-w-[200px] sm:max-w-md">
                         {Object.entries(rank.appCounts).map(([app, c]) => (
-                          <span key={app} className="text-[7px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-slate-400 font-bold uppercase whitespace-nowrap">
+                          <span key={app} className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-slate-300 font-bold uppercase whitespace-nowrap" style={{ fontSize: `${Math.max(9, adminFontSize - 4)}px` }}>
                             {app}: <span className="text-amber-500">{c}</span>
                           </span>
                         ))}
                       </div>
                       <div className="text-right min-w-[60px]">
-                        <span className="text-xl font-black text-amber-500 leading-none block">{rank.count}</span>
-                        <span className="text-[7px] font-black uppercase text-slate-500">TOTAL OPS</span>
+                        <span className="font-black text-amber-500 leading-none block" style={{ fontSize: `${adminFontSize + 6}px` }}>{rank.count}</span>
+                        <span className="font-black uppercase text-slate-500" style={{ fontSize: `${Math.max(9, adminFontSize - 5)}px` }}>TOTAL OPS</span>
                       </div>
                     </div>
                     {rank.totalCost > 0 && (
-                      <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">{rank.totalCost.toFixed(3)} €</span>
+                      <span className="font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full" style={{ fontSize: `${Math.max(10, adminFontSize - 3)}px` }}>{rank.totalCost.toFixed(3)} €</span>
                     )}
                   </div>
                 </div>
@@ -1526,7 +1541,10 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
           ) : activeTab === 'minutes' ? (
             <div className="space-y-4">
               <FontSizeControl size={adminFontSize} onChange={setAdminFontSize} />
-              {Array.isArray(minutesLogs) && minutesLogs.filter((log) => !isAdminTip(log?.agentTip)).map((log) => {
+              {/* v4.06 — Mostrem TOTES les minutes, incloses les del TIP admin
+                   (5085). L'admin sovint testeja amb el seu propi TIP i abans
+                   no veia les seves pròpies generacions; ara sí. */}
+              {Array.isArray(minutesLogs) && minutesLogs.map((log) => {
                 const tip = String(log?.agentTip || '???');
                 let agentName = '';
                 try {
