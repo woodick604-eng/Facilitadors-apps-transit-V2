@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.67</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.68</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -1687,46 +1687,50 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
   //   · línia "shine" al top quan es hover
   //   · top accent bar més marcada
   //   · cantonada inferior dreta amb un degradat radial subtil
+  // v2.68 — Paleta blaugrana: imatges (verd) → grana, gestió (violeta) → blau
+  // Es manté dictat amb el blau primari i admin amb ambre (per coherència
+  // amb la naturalesa del rol). Les cards de gestió porten una tonalitat
+  // de blau lleugerament diferent (sky/indigo) per distingir-se de dictat.
   const catGrad: Record<string, string> = {
     dictat:  'from-blue-500/30 via-slate-900/50 to-cyan-500/15',
-    imatges: 'from-emerald-500/30 via-slate-900/50 to-teal-500/15',
-    gestio:  'from-purple-500/30 via-slate-900/50 to-fuchsia-500/15',
+    imatges: 'from-rose-600/30 via-slate-900/50 to-red-800/15',
+    gestio:  'from-sky-500/30 via-slate-900/50 to-indigo-600/15',
     admin:   'from-amber-500/30 via-slate-900/50 to-orange-500/15'
   };
   const catRadial: Record<string, string> = {
     dictat:  'radial-gradient(circle at 100% 0%, rgba(59,130,246,0.18), transparent 55%)',
-    imatges: 'radial-gradient(circle at 100% 0%, rgba(16,185,129,0.18), transparent 55%)',
-    gestio:  'radial-gradient(circle at 100% 0%, rgba(168,85,247,0.18), transparent 55%)',
+    imatges: 'radial-gradient(circle at 100% 0%, rgba(190,18,60,0.20), transparent 55%)',
+    gestio:  'radial-gradient(circle at 100% 0%, rgba(14,165,233,0.18), transparent 55%)',
     admin:   'radial-gradient(circle at 100% 0%, rgba(245,158,11,0.18), transparent 55%)'
   };
   const catGlow: Record<string, string> = {
     dictat:  'group-hover:shadow-[0_0_60px_-10px_rgba(59,130,246,0.55)]',
-    imatges: 'group-hover:shadow-[0_0_60px_-10px_rgba(16,185,129,0.55)]',
-    gestio:  'group-hover:shadow-[0_0_60px_-10px_rgba(168,85,247,0.55)]',
+    imatges: 'group-hover:shadow-[0_0_60px_-10px_rgba(190,18,60,0.55)]',
+    gestio:  'group-hover:shadow-[0_0_60px_-10px_rgba(14,165,233,0.55)]',
     admin:   'group-hover:shadow-[0_0_60px_-10px_rgba(245,158,11,0.55)]'
   };
   const catBar: Record<string, string> = {
     dictat:  'from-blue-400 via-cyan-400 to-blue-600',
-    imatges: 'from-emerald-400 via-teal-400 to-emerald-600',
-    gestio:  'from-purple-400 via-fuchsia-400 to-purple-600',
+    imatges: 'from-rose-400 via-red-500 to-rose-700',
+    gestio:  'from-sky-400 via-blue-400 to-indigo-500',
     admin:   'from-amber-400 via-orange-400 to-amber-600'
   };
   const catIconBg: Record<string, string> = {
     dictat:  'bg-gradient-to-br from-blue-400/30 to-blue-700/20 text-blue-200 border-blue-300/40 shadow-blue-500/30',
-    imatges: 'bg-gradient-to-br from-emerald-400/30 to-emerald-700/20 text-emerald-200 border-emerald-300/40 shadow-emerald-500/30',
-    gestio:  'bg-gradient-to-br from-purple-400/30 to-purple-700/20 text-purple-200 border-purple-300/40 shadow-purple-500/30',
+    imatges: 'bg-gradient-to-br from-rose-400/30 to-red-800/20 text-rose-200 border-rose-300/40 shadow-rose-600/30',
+    gestio:  'bg-gradient-to-br from-sky-400/30 to-indigo-700/20 text-sky-200 border-sky-300/40 shadow-sky-500/30',
     admin:   'bg-gradient-to-br from-amber-400/30 to-amber-700/20 text-amber-200 border-amber-300/40 shadow-amber-500/30'
   };
   const catTextHover: Record<string, string> = {
     dictat:  'group-hover:text-blue-200',
-    imatges: 'group-hover:text-emerald-200',
-    gestio:  'group-hover:text-fuchsia-200',
+    imatges: 'group-hover:text-rose-200',
+    gestio:  'group-hover:text-sky-200',
     admin:   'group-hover:text-amber-200'
   };
   const catDot: Record<string, string> = {
     dictat:  'bg-blue-400',
-    imatges: 'bg-emerald-400',
-    gestio:  'bg-fuchsia-400',
+    imatges: 'bg-rose-500',
+    gestio:  'bg-sky-400',
     admin:   'bg-amber-400'
   };
   const grad      = catGrad[link.category]      || catGrad.dictat;
