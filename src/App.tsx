@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.62</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.63</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -1674,8 +1674,11 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
 
 function AppCard({ link, index, onClick }: { link: AppLink, index: number, onClick: () => void, key?: string | number }) {
   const Icon = link.icon;
-  // Apps visibles al mòbil: LA 1, LA 4, LA 5, LA 6, LA 7, LA 8, LA 19 (la resta només al desktop)
-  const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'informe-vector' || link.id === 'gestor-casos' || link.id === 'minutes' || link.id === 'interpretador-veco' || link.id === 'a76-penal-administrativa' || link.id === 'la19-backup-admin';
+  // Apps visibles al mòbil: LA 1, LA 5, LA 6, LA 7, LA 8, LA 19 (la resta només al desktop)
+  // v2.63 — LA 4 (informe-vector / A-76 Acta de Signes Externs) retirada del
+  // mòbil per coherència amb el bypass mòbil de v62.72: l'app A-76 redirigeix
+  // a desktop, per tant tampoc ha d'aparèixer com a opció al mòbil.
+  const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'gestor-casos' || link.id === 'minutes' || link.id === 'interpretador-veco' || link.id === 'a76-penal-administrativa' || link.id === 'la19-backup-admin';
 
   // v2.62 — Cards més presents en pantalla completa: títol més gran, icona
   // gran amb gradient pel color de la categoria, gradient de fons subtil i
