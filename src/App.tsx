@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.65</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.66</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -1680,18 +1680,24 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
   // a desktop, per tant tampoc ha d'aparèixer com a opció al mòbil.
   const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'gestor-casos' || link.id === 'minutes' || link.id === 'interpretador-veco' || link.id === 'a76-penal-administrativa' || link.id === 'la19-backup-admin';
 
-  // v2.65 — Detalls professionals (designer touch, sense passar-se):
-  //   · gradient més ric per categoria
-  //   · accent line de color sota la icona
-  //   · marca d'aigua de la icona en gran al fons (depth)
-  //   · separador sota el títol amb gradient
-  //   · top-bar fina amb el color de la categoria
-  //   · text del codi amb tractament tipogràfic més curat
+  // v2.66 — Polit: tipografia 1 nivell més petita per equilibri + detalls:
+  //   · gradient diagonal amb dos accents de color per cada categoria
+  //   · watermark de la icona més visible (depth)
+  //   · radial-gradient decoratiu al cantó oposat
+  //   · línia "shine" al top quan es hover
+  //   · top accent bar més marcada
+  //   · cantonada inferior dreta amb un degradat radial subtil
   const catGrad: Record<string, string> = {
-    dictat:  'from-blue-500/25 via-slate-900/40 to-transparent',
-    imatges: 'from-emerald-500/25 via-slate-900/40 to-transparent',
-    gestio:  'from-purple-500/25 via-slate-900/40 to-transparent',
-    admin:   'from-amber-500/25 via-slate-900/40 to-transparent'
+    dictat:  'from-blue-500/30 via-slate-900/50 to-cyan-500/15',
+    imatges: 'from-emerald-500/30 via-slate-900/50 to-teal-500/15',
+    gestio:  'from-purple-500/30 via-slate-900/50 to-fuchsia-500/15',
+    admin:   'from-amber-500/30 via-slate-900/50 to-orange-500/15'
+  };
+  const catRadial: Record<string, string> = {
+    dictat:  'radial-gradient(circle at 100% 0%, rgba(59,130,246,0.18), transparent 55%)',
+    imatges: 'radial-gradient(circle at 100% 0%, rgba(16,185,129,0.18), transparent 55%)',
+    gestio:  'radial-gradient(circle at 100% 0%, rgba(168,85,247,0.18), transparent 55%)',
+    admin:   'radial-gradient(circle at 100% 0%, rgba(245,158,11,0.18), transparent 55%)'
   };
   const catGlow: Record<string, string> = {
     dictat:  'group-hover:shadow-[0_0_60px_-10px_rgba(59,130,246,0.55)]',
@@ -1723,12 +1729,13 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
     gestio:  'bg-fuchsia-400',
     admin:   'bg-amber-400'
   };
-  const grad     = catGrad[link.category]      || catGrad.dictat;
-  const glow     = catGlow[link.category]      || '';
-  const bar      = catBar[link.category]       || catBar.dictat;
-  const iconBg   = catIconBg[link.category]    || catIconBg.dictat;
-  const titleHov = catTextHover[link.category] || catTextHover.dictat;
-  const dot      = catDot[link.category]       || catDot.dictat;
+  const grad      = catGrad[link.category]      || catGrad.dictat;
+  const glow      = catGlow[link.category]      || '';
+  const bar       = catBar[link.category]       || catBar.dictat;
+  const iconBg    = catIconBg[link.category]    || catIconBg.dictat;
+  const titleHov  = catTextHover[link.category] || catTextHover.dictat;
+  const dot       = catDot[link.category]       || catDot.dictat;
+  const radialBg  = catRadial[link.category]    || catRadial.dictat;
 
   return (
         <motion.button
@@ -1737,14 +1744,20 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
+          style={{ backgroundImage: radialBg }}
           className={`group relative bg-gradient-to-br ${grad} bg-mossos-blue/40 backdrop-blur-sm rounded-3xl p-5 lg:p-5 xl:p-6 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-0 lg:h-full ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : `hover:border-white/25 ${glow} transition-all duration-500 shadow-xl`}`}
         >
-          {/* v2.65 — Top accent bar amb gradient del color de la categoria */}
-          <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${bar} opacity-70 group-hover:opacity-100 transition-opacity`} />
+          {/* v2.66 — Top accent bar amb gradient del color de la categoria */}
+          <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${bar} opacity-80 group-hover:opacity-100 transition-opacity z-10`} />
 
-          {/* v2.65 — Watermark gegant de la icona, opacitat baixa, donant profunditat */}
-          <div className="absolute -bottom-6 -right-6 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-700 pointer-events-none">
-            <Icon className="w-44 h-44 lg:w-52 lg:h-52 text-white" strokeWidth={1.2} />
+          {/* v2.66 — Shine: línia de llum que recorre la card al hover */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
+            <div className="absolute -inset-y-2 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/[0.08] to-transparent skew-x-[-20deg] translate-x-0 group-hover:translate-x-[300%] transition-transform duration-1000 ease-out" />
+          </div>
+
+          {/* v2.66 — Watermark gegant de la icona, més visible, donant profunditat */}
+          <div className="absolute -bottom-8 -right-8 opacity-[0.07] group-hover:opacity-[0.13] transition-opacity duration-700 pointer-events-none">
+            <Icon className="w-48 h-48 lg:w-56 lg:h-56 text-white" strokeWidth={1.4} />
           </div>
 
           {link.status === 'maintenance' && (
@@ -1755,14 +1768,14 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
             </div>
           )}
           <div className={`flex justify-between items-start z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-            <div className={`w-14 h-14 lg:w-16 lg:h-16 xl:w-20 xl:h-20 rounded-2xl flex items-center justify-center shadow-lg border ${iconBg} group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}><Icon className="w-7 h-7 lg:w-9 lg:h-9 xl:w-11 xl:h-11" strokeWidth={1.8} /></div>
+            <div className={`w-14 h-14 lg:w-16 lg:h-16 xl:w-[72px] xl:h-[72px] rounded-2xl flex items-center justify-center shadow-lg border ${iconBg} group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}><Icon className="w-7 h-7 lg:w-9 lg:h-9 xl:w-10 xl:h-10" strokeWidth={1.8} /></div>
             <span className="text-[8px] lg:text-[10px] font-mono font-bold text-slate-400 px-2 py-1 rounded-md bg-black/30 border border-white/10 tracking-[0.15em] uppercase">{link.code}</span>
           </div>
           <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-            <h3 className={`text-xl lg:text-2xl xl:text-[1.7rem] font-black text-white ${titleHov} transition-colors uppercase leading-[1.15] mb-2 lg:mb-3 whitespace-pre-line tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]`}>{link.title}</h3>
-            {/* v2.65 — Línia de separació elegant amb gradient */}
-            <div className={`h-[1px] w-12 bg-gradient-to-r ${bar} opacity-60 mb-3 group-hover:w-24 transition-all duration-500`} />
-            <p className="text-slate-300 text-xs lg:text-sm xl:text-[15px] font-medium leading-relaxed line-clamp-3 lg:line-clamp-3">{link.description}</p>
+            <h3 className={`text-lg lg:text-xl xl:text-2xl font-black text-white ${titleHov} transition-colors uppercase leading-[1.18] mb-2 lg:mb-3 whitespace-pre-line tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]`}>{link.title}</h3>
+            {/* v2.66 — Línia de separació elegant amb gradient */}
+            <div className={`h-[1px] w-10 bg-gradient-to-r ${bar} opacity-60 mb-3 group-hover:w-20 transition-all duration-500`} />
+            <p className="text-slate-300 text-xs lg:text-sm xl:text-[14px] font-medium leading-relaxed line-clamp-3">{link.description}</p>
           </div>
           <div className={`flex items-center justify-between pt-3 lg:pt-4 border-t border-white/10 mt-3 lg:mt-4 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
             <div className="flex items-center gap-2">
