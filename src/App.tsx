@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.61</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.62</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -1677,48 +1677,66 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
   // Apps visibles al mòbil: LA 1, LA 4, LA 5, LA 6, LA 7, LA 8, LA 19 (la resta només al desktop)
   const isMobileOperative = link.id === 'dictat-accidents' || link.id === 'informe-vector' || link.id === 'gestor-casos' || link.id === 'minutes' || link.id === 'interpretador-veco' || link.id === 'a76-penal-administrativa' || link.id === 'la19-backup-admin';
 
+  // v2.62 — Cards més presents en pantalla completa: títol més gran, icona
+  // gran amb gradient pel color de la categoria, gradient de fons subtil i
+  // glow al hover. Mantenim el comportament i mides al mòbil.
+  const catGrad: Record<string, string> = {
+    dictat:  'from-blue-500/30 via-blue-600/15 to-transparent',
+    imatges: 'from-emerald-500/30 via-emerald-600/15 to-transparent',
+    gestio:  'from-purple-500/30 via-purple-600/15 to-transparent',
+    admin:   'from-amber-500/30 via-amber-600/15 to-transparent'
+  };
+  const catGlow: Record<string, string> = {
+    dictat:  'group-hover:shadow-[0_0_60px_-10px_rgba(59,130,246,0.55)]',
+    imatges: 'group-hover:shadow-[0_0_60px_-10px_rgba(16,185,129,0.55)]',
+    gestio:  'group-hover:shadow-[0_0_60px_-10px_rgba(168,85,247,0.55)]',
+    admin:   'group-hover:shadow-[0_0_60px_-10px_rgba(245,158,11,0.55)]'
+  };
+  const grad = catGrad[link.category] || catGrad.dictat;
+  const glow = catGlow[link.category] || '';
+
   return (
-    <motion.button
-      onClick={() => link.status !== 'maintenance' && onClick()}
-      disabled={link.status === 'maintenance'}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      className={`group relative bg-mossos-blue/60 backdrop-blur-sm rounded-3xl p-5 lg:p-3 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-0 lg:h-full ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : 'hover:border-mossos-blue hover:bg-mossos-blue/80 transition-all duration-500 shadow-xl'}`}
-    >
-      {link.status === 'maintenance' && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="bg-amber-500 text-black px-6 py-1.5 -rotate-12 font-black text-base tracking-widest uppercase shadow-2xl border-y-2 border-dashed border-black/50 overflow-hidden w-[120%] text-center">
-            {link.maintenanceMsg || 'En Construcció'}
-          </div>
-        </div>
-      )}
-      <div className={`flex justify-between items-start z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-        <div className={`w-12 h-12 lg:w-10 lg:h-10 rounded-2xl flex items-center justify-center shadow-xl border border-white/10 ${link.category === 'dictat' ? 'bg-blue-600/20 text-blue-400' : link.category === 'imatges' ? 'bg-emerald-600/20 text-emerald-400' : link.category === 'admin' ? 'bg-amber-600/20 text-amber-400' : 'bg-purple-600/20 text-purple-400'} group-hover:bg-mossos-blue group-hover:text-white transition-all`}><Icon className="w-6 h-6 lg:w-5 lg:h-5" /></div>
-        <span className="text-[8px] lg:text-[10px] font-mono text-slate-600">{link.code}</span>
-      </div>
-      <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-        <h3 className="text-xl lg:text-lg font-black text-white group-hover:text-amber-500 transition-colors uppercase leading-tight mb-2 whitespace-pre-line">{link.title}</h3>
-        <p className="text-slate-400 text-xs lg:text-[12px] font-medium leading-snug line-clamp-2">{link.description}</p>
-      </div>
-      <div className={`flex items-center justify-between pt-3 lg:pt-3 border-t border-white/5 mt-3 lg:mt-3 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-        <div className="flex items-center gap-2">
-          <div className={`w-1.5 h-1.5 rounded-full ${link.category === 'dictat' ? 'bg-blue-500' : link.category === 'imatges' ? 'bg-emerald-500' : 'bg-purple-500'}`} />
-          <span className="text-[9px] lg:text-[10px] font-black uppercase text-slate-500">{link.category}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {link.category === 'imatges' && (
-            <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-              <Monitor className="w-3 h-3 text-emerald-400" />
-              <span className="text-[8px] font-black text-emerald-400 uppercase tracking-wider">Escriptori</span>
+        <motion.button
+          onClick={() => link.status !== 'maintenance' && onClick()}
+          disabled={link.status === 'maintenance'}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05 }}
+          className={`group relative bg-gradient-to-br ${grad} bg-mossos-blue/40 backdrop-blur-sm rounded-3xl p-5 lg:p-5 xl:p-6 border-2 border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-0 lg:h-full ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : `hover:border-white/30 ${glow} transition-all duration-500 shadow-xl`}`}
+        >
+          {link.status === 'maintenance' && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+              <div className="bg-amber-500 text-black px-6 py-1.5 -rotate-12 font-black text-base tracking-widest uppercase shadow-2xl border-y-2 border-dashed border-black/50 overflow-hidden w-[120%] text-center">
+                {link.maintenanceMsg || 'En Construcció'}
+              </div>
             </div>
           )}
-          {link.status !== 'maintenance' && (
-            <ExternalLink className="w-4 h-4 text-mossos-blue translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
-          )}
-        </div>
-      </div>
-    </motion.button>
+          <div className={`flex justify-between items-start z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
+            <div className={`w-14 h-14 lg:w-16 lg:h-16 xl:w-20 xl:h-20 rounded-2xl flex items-center justify-center shadow-2xl border-2 ${link.category === 'dictat' ? 'bg-blue-500/25 text-blue-300 border-blue-400/30' : link.category === 'imatges' ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/30' : link.category === 'admin' ? 'bg-amber-500/25 text-amber-300 border-amber-400/30' : 'bg-purple-500/25 text-purple-300 border-purple-400/30'} group-hover:scale-110 transition-all duration-300`}><Icon className="w-7 h-7 lg:w-9 lg:h-9 xl:w-11 xl:h-11" /></div>
+            <span className="text-[8px] lg:text-[11px] font-mono text-slate-500 px-2 py-0.5 rounded-md bg-white/5 border border-white/10">{link.code}</span>
+          </div>
+          <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
+            <h3 className="text-xl lg:text-2xl xl:text-[1.7rem] font-black text-white group-hover:text-amber-300 transition-colors uppercase leading-[1.15] mb-2 lg:mb-3 whitespace-pre-line tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]">{link.title}</h3>
+            <p className="text-slate-300 text-xs lg:text-sm xl:text-[15px] font-medium leading-relaxed line-clamp-3 lg:line-clamp-3">{link.description}</p>
+          </div>
+          <div className={`flex items-center justify-between pt-3 lg:pt-4 border-t border-white/10 mt-3 lg:mt-4 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${link.category === 'dictat' ? 'bg-blue-500' : link.category === 'imatges' ? 'bg-emerald-500' : link.category === 'admin' ? 'bg-amber-500' : 'bg-purple-500'} shadow-[0_0_10px_currentColor]`} />
+              <span className="text-[10px] lg:text-[11px] font-black uppercase text-slate-400 tracking-wider">{link.category}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {link.category === 'imatges' && (
+                <div className="flex items-center gap-1 bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  <Monitor className="w-3 h-3 text-emerald-400" />
+                  <span className="text-[8px] lg:text-[9px] font-black text-emerald-400 uppercase tracking-wider">Escriptori</span>
+                </div>
+              )}
+              {link.status !== 'maintenance' && (
+                <ExternalLink className="w-4 h-4 lg:w-5 lg:h-5 text-amber-400 translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100 transition-all" />
+              )}
+            </div>
+          </div>
+        </motion.button>
   );
 }
 
