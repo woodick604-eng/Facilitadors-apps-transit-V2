@@ -95,7 +95,7 @@ export const APP_LINKS: AppLink[] = [
   {
     id: 'interpretador-veco',
     title: '7. Interpretador de Pantalles Veco',
-    description: 'Eina en construcció per a la interpretació de dades de pantalles Veco.',
+    description: 'Eina per a la interpretació de dades de pantalles Veco.',
     url: 'https://atenea-veco-001.web.app',
     icon: Monitor,
     category: 'gestio',

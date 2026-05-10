@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.63</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.64</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
