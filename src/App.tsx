@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.68</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.70</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -1773,10 +1773,16 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
             <span className="text-[8px] lg:text-[10px] font-mono font-bold text-slate-400 px-2 py-1 rounded-md bg-black/30 border border-white/10 tracking-[0.15em] uppercase">{link.code}</span>
           </div>
           <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-            <h3 className={`text-lg lg:text-xl xl:text-2xl font-black text-white ${titleHov} transition-colors uppercase leading-[1.18] mb-2 lg:mb-3 whitespace-pre-line tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]`}>{link.title}</h3>
+            {/* v2.69 — títols més equilibrats: 1 step menys a tots els breakpoints
+                perquè els títols llargs (REANOMENADOR DE FOTOGRAFIES, SIMPTOMATOLOGIA…)
+                no desbordin la card i la descripció es vegi sencera. */}
+            <h3 className={`text-base lg:text-lg xl:text-xl font-black text-white ${titleHov} transition-colors uppercase leading-[1.15] mb-2 lg:mb-3 whitespace-pre-line tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]`}>{link.title}</h3>
             {/* v2.66 — Línia de separació elegant amb gradient */}
             <div className={`h-[1px] w-10 bg-gradient-to-r ${bar} opacity-60 mb-3 group-hover:w-20 transition-all duration-500`} />
-            <p className="text-slate-300 text-xs lg:text-sm xl:text-[14px] font-medium leading-relaxed line-clamp-3">{link.description}</p>
+            {/* v2.70 — descripció sense truncament: ha de cabre tot el text de la
+                descripció dins la card. Les cards s'adaptaran en alçada (totes
+                igualades pel grid). */}
+            <p className="text-slate-300 text-xs lg:text-sm xl:text-[14px] font-medium leading-relaxed">{link.description}</p>
           </div>
           <div className={`flex items-center justify-between pt-3 lg:pt-4 border-t border-white/10 mt-3 lg:mt-4 relative z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
             <div className="flex items-center gap-2">
