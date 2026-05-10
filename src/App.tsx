@@ -866,7 +866,7 @@ export default function App() {
 
             <div className="flex items-center gap-3">
               <span className="text-blue-400 text-sm font-black uppercase tracking-widest">Unitat de Trànsit</span>
-              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.66</span>
+              <span className="text-slate-600 text-[11px] lg:text-[14px] font-black uppercase tracking-widest flex items-center gap-3"><AgentBadge tip="@5085" className="text-[12px] px-2 py-1" /> • VERSIÓ 2.67</span>
               {currentUser?.isAdmin && <span className="text-[8px] bg-amber-500 text-black px-1.5 py-0.5 rounded font-black">ADMIN</span>}
             </div>
           </div>
@@ -1755,10 +1755,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
             <div className="absolute -inset-y-2 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/[0.08] to-transparent skew-x-[-20deg] translate-x-0 group-hover:translate-x-[300%] transition-transform duration-1000 ease-out" />
           </div>
 
-          {/* v2.66 — Watermark gegant de la icona, més visible, donant profunditat */}
-          <div className="absolute -bottom-8 -right-8 opacity-[0.07] group-hover:opacity-[0.13] transition-opacity duration-700 pointer-events-none">
-            <Icon className="w-48 h-48 lg:w-56 lg:h-56 text-white" strokeWidth={1.4} />
-          </div>
+          {/* v2.67 — Watermark gegant retirat: feia massa soroll visual. */}
 
           {link.status === 'maintenance' && (
             <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
