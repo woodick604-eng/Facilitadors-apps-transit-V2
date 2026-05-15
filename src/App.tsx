@@ -1,4 +1,5 @@
 // Copyright (c) 2026 @5085. Tots els drets reservats.
+// Copyright (c) 2026 Alejandro Adsuar Gil (DNI: 46560991K). Tots els drets reservats.
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ExternalLink,
@@ -272,6 +273,28 @@ export default function App() {
     }
   };
 
+  // Registra de manera traçable l'acceptació de l'avís legal (per a defensa jurídica futura).
+  // Es desa a localStorage sempre, i si l'usuari està autenticat es logueja també a Firestore.
+  const acceptLegal = () => {
+    const LEGAL_VERSION = 'v4.0.0';
+    localStorage.setItem('legal_accepted_v_global', 'true');
+    localStorage.setItem('legal_accepted_version', LEGAL_VERSION);
+    localStorage.setItem('legal_accepted_at', new Date().toISOString());
+    setShowLegalModal(false);
+    // Best-effort: si tenim TIP autenticat, escrivim un registre traçable a Firestore.
+    if (currentUser?.tip) {
+      try {
+        addDoc(collection(db, 'legal_acceptances'), {
+          tip: currentUser.tip,
+          name: currentUser.name || null,
+          version: LEGAL_VERSION,
+          timestamp: serverTimestamp(),
+          userAgent: (navigator.userAgent || '').substring(0, 200),
+        }).catch(() => { /* sense bloquejar UX */ });
+      } catch (_) { /* idem */ }
+    }
+  };
+
   // Real-time validation states
   const [isTipValidated, setIsTipValidated] = useState(false);
   const [tempUserData, setTempUserData] = useState<any>(null);
@@ -281,6 +304,7 @@ export default function App() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
 
 
   // Auto-omplir TIP des de localStorage despres de veure l'animacio de la moto
@@ -294,7 +318,18 @@ export default function App() {
 
   // Auto-submit del PIN: quan l'usuari teclegeja el 4t dígit i NO és el primer
   // login (creació de PIN), validem automàticament sense haver de pulsar el botó.
-  useEffect(() => {
+  React.useEffect(() => {
+    if (!isTipValidated || !tempUserData) return;
+    if (tempUserData.firstLogin) return;
+    if (pin.length === 4 && !error) {
+      const t = setTimeout(() => { doAuth(); }, 80);
+      return () => clearTimeout(t);
+    }
+  }, [pin, isTipValidated, tempUserData, error]);
+
+  // Auto-submit del PIN: quan l'usuari teclegeja el 4t dígit i NO és el primer
+  // login (creació de PIN), validem automàticament sense haver de pulsar el botó.
+  React.useEffect(() => {
     if (!isTipValidated || !tempUserData) return;
     if (tempUserData.firstLogin) return;
     if (pin.length === 4 && !error) {
@@ -1102,6 +1137,21 @@ function AdminDashboard({ logs, costLogs, rankLogs, users, dictatLogs, appStatus
     const s = String(tip || '').replace(/\D/g, '').replace(/^0+/, '');
     return s === '5085';
   };
+  // Tamany de font ajustable per a les llistes d'informes (Dictat LA 1 + Minutes LA 6).
+  // Persistent al localStorage perquè cada admin recordi la seva preferència.
+  const [adminFontSize, setAdminFontSize] = useState<number>(() => {
+    if (typeof window === 'undefined') return 15;
+    const saved = parseInt(localStorage.getItem('admin_font_size') || '15', 10);
+    return isNaN(saved) ? 15 : Math.min(24, Math.max(11, saved));
+  });
+  useEffect(() => {
+    try { localStorage.setItem('admin_font_size', String(adminFontSize)); } catch {}
+  }, [adminFontSize]);
+  // Helper: el TIP de l'admin (5085) NO ha d'aparèixer als llistats — és l'administrador.
+  const isAdminTip = (tip: any): boolean => {
+    const s = String(tip || '').replace(/\D/g, '').replace(/^0+/, '');
+    return s === '5085';
+  };
   // Lectura dels documents de LA 6 (projecte Firebase: dictat-minutes) via REST.
   // Polling cada 30 s — LA 6 desa amb REST i no SDK, així que aquí també.
   // Paginem fins a esgotar nextPageToken per agafar TOTES les minutes (abans
@@ -1749,7 +1799,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
           style={{ backgroundImage: radialBg }}
-          className={`group relative bg-gradient-to-br ${grad} bg-mossos-blue/40 backdrop-blur-sm rounded-3xl p-5 lg:p-5 xl:p-6 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-0 lg:h-full ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : `hover:border-white/25 ${glow} transition-all duration-500 shadow-xl`}`}
+          className={`group relative bg-gradient-to-br ${grad} bg-mossos-blue/40 backdrop-blur-sm rounded-3xl p-4 lg:p-4 xl:p-5 border border-white/10 ${isMobileOperative ? 'flex' : 'hidden md:flex'} flex-col justify-between text-left overflow-hidden min-h-[180px] lg:min-h-0 lg:h-full ${link.status === 'maintenance' ? 'opacity-60 grayscale cursor-not-allowed' : `hover:border-white/25 ${glow} transition-all duration-500 shadow-xl`}`}
         >
           {/* v2.66 — Top accent bar amb gradient del color de la categoria */}
           <div className={`absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r ${bar} opacity-80 group-hover:opacity-100 transition-opacity z-10`} />
@@ -1773,7 +1823,7 @@ function AppCard({ link, index, onClick }: { link: AppLink, index: number, onCli
             <span className="text-[8px] lg:text-[10px] font-mono font-bold text-slate-400 px-2 py-1 rounded-md bg-black/30 border border-white/10 tracking-[0.15em] uppercase">{link.code}</span>
           </div>
           <div className={`mt-3 lg:mt-4 z-10 ${link.status === 'maintenance' ? 'opacity-50' : ''}`}>
-            {/* v2.69 — títols més equilibrats: 1 step menys a tots els breakpoints
+            {/* v2.69 — títol més equilibrat: 1 step menys a tots els breakpoints
                 perquè els títols llargs (REANOMENADOR DE FOTOGRAFIES, SIMPTOMATOLOGIA…)
                 no desbordin la card i la descripció es vegi sencera. */}
             <h3 className={`text-base lg:text-lg xl:text-xl font-black text-white ${titleHov} transition-colors uppercase leading-[1.15] mb-2 lg:mb-3 whitespace-pre-line tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]`}>{link.title}</h3>
